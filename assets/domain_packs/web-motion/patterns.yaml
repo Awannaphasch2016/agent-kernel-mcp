@@ -1,0 +1,300 @@
+# Web Motion Domain Pack - Pattern Library (L2)
+# Reusable animation patterns with semantic triggers and applicability rules
+
+domain: web_motion
+version: 1.0.0
+description: Curated library of proven animation patterns
+
+# L2: Pattern Plan Structure
+patterns:
+  - id: scroll_reveal
+    name: "Scroll Reveal"
+    category: element_enter
+    description: "Element fades and slides into view when scrolling into viewport"
+
+    triggers:
+      natural_language:
+        - "fade in on scroll"
+        - "slide up when visible"
+        - "reveal on viewport entry"
+        - "appear when scrolling"
+
+    semantic_template:
+      scene_type: element_enter
+      driver:
+        type: time
+        duration_ms: 600
+      easing: easeOutQuad
+      trigger:
+        type: on_enter_viewport
+        threshold: 0.5
+        root_margin: "0px 0px -100px 0px"
+      target_elements:
+        - selector: "{target}"
+          tracks:
+            y: {from: 40, to: 0, unit: "px"}
+            opacity: {from: 0, to: 1}
+      constraints:
+        play_once: true
+        prefer_css: true
+
+    parameters:
+      - name: slide_distance
+        type: number
+        default: 40
+        unit: px
+        description: "How far element slides from initial position"
+
+      - name: fade_from
+        type: number
+        default: 0
+        range: [0, 1]
+
+      - name: duration_ms
+        type: number
+        default: 600
+        range: [200, 2000]
+
+      - name: threshold
+        type: number
+        default: 0.5
+        range: [0, 1]
+        description: "% of element visible before trigger"
+
+    variants:
+      - name: scroll_reveal_from_left
+        changes: {y: null, x: {from: -40, to: 0}}
+
+      - name: scroll_reveal_from_right
+        changes: {y: null, x: {from: 40, to: 0}}
+
+      - name: scroll_reveal_scale
+        changes:
+          y: {from: 20, to: 0}
+          scale: {from: 0.95, to: 1}
+
+  - id: parallax
+    name: "Parallax Scroll"
+    category: scroll_linked
+    description: "Element moves at different speed than scroll to create depth"
+
+    triggers:
+      natural_language:
+        - "parallax effect"
+        - "scroll at different speed"
+        - "depth scrolling"
+        - "background moves slower"
+
+    semantic_template:
+      scene_type: scroll_linked
+      driver:
+        type: scroll
+        scroll_range_px: viewport_height
+      easing: linear
+      trigger:
+        type: on_scroll_position
+      target_elements:
+        - selector: "{target}"
+          tracks:
+            y: {from: 0, to: -100, unit: "px"}
+      constraints:
+        loop: false
+        prefer_css: false  # Requires JS for scroll tracking
+
+    parameters:
+      - name: speed_multiplier
+        type: number
+        default: 0.5
+        range: [0.1, 2.0]
+        description: "Relative speed (0.5 = half speed, 2.0 = double speed)"
+
+      - name: direction
+        type: string
+        default: "vertical"
+        values: ["vertical", "horizontal"]
+
+  - id: stagger_animation
+    name: "Stagger Animation"
+    category: element_enter
+    description: "Sequential animation of multiple elements with delay"
+
+    triggers:
+      natural_language:
+        - "animate one by one"
+        - "sequential reveal"
+        - "cascade animation"
+        - "stagger children"
+
+    semantic_template:
+      scene_type: element_enter
+      driver:
+        type: time
+        duration_ms: 500
+      easing: easeOutCubic
+      trigger:
+        type: on_enter_viewport
+        threshold: 0.3
+      target_elements:
+        - selector: "{target} > *"  # All children
+          tracks:
+            y: {from: 20, to: 0, unit: "px"}
+            opacity: {from: 0, to: 1}
+      constraints:
+        play_once: true
+        stagger_children:
+          enabled: true
+          delay_ms: 100
+
+    parameters:
+      - name: stagger_delay_ms
+        type: number
+        default: 100
+        range: [50, 300]
+
+      - name: base_duration_ms
+        type: number
+        default: 500
+
+  - id: hover_lift
+    name: "Hover Lift"
+    category: user_interaction
+    description: "Element lifts with shadow on hover"
+
+    triggers:
+      natural_language:
+        - "lift on hover"
+        - "float on mouse over"
+        - "card hover effect"
+
+    semantic_template:
+      scene_type: user_interaction
+      driver:
+        type: interaction
+        event_type: hover
+      easing: easeOutQuad
+      trigger:
+        type: on_user_event
+        event: "mouseenter"
+      target_elements:
+        - selector: "{target}"
+          tracks:
+            y: {from: 0, to: -8, unit: "px"}
+            scale: {from: 1, to: 1.02}
+      constraints:
+        reverse_on_exit: true
+        prefer_css: true
+
+    parameters:
+      - name: lift_distance
+        type: number
+        default: 8
+        unit: px
+
+      - name: scale_amount
+        type: number
+        default: 1.02
+        range: [1.0, 1.1]
+
+  - id: number_counter
+    name: "Number Counter"
+    category: timed_sequence
+    description: "Animated counting from start to end number"
+
+    triggers:
+      natural_language:
+        - "count up animation"
+        - "number animation"
+        - "animated counter"
+        - "incrementing number"
+
+    semantic_template:
+      scene_type: timed_sequence
+      driver:
+        type: time
+        duration_ms: 2000
+      easing: easeOutQuart
+      trigger:
+        type: on_enter_viewport
+        threshold: 0.8
+      target_elements:
+        - selector: "{target}"
+          tracks:
+            custom:
+              property: "textContent"
+              from: 0
+              to: "{end_value}"
+      constraints:
+        play_once: true
+        prefer_css: false  # Requires JS
+
+    parameters:
+      - name: start_value
+        type: number
+        default: 0
+
+      - name: end_value
+        type: number
+        required: true
+
+      - name: duration_ms
+        type: number
+        default: 2000
+
+      - name: format
+        type: string
+        default: "integer"
+        values: ["integer", "decimal", "currency", "percentage"]
+
+  - id: fade_slide_sequence
+    name: "Fade and Slide Sequence"
+    category: timed_sequence
+    description: "Multiple elements fade/slide in sequence on page load"
+
+    triggers:
+      natural_language:
+        - "hero animation sequence"
+        - "load animation"
+        - "entrance sequence"
+
+    semantic_template:
+      scene_type: timed_sequence
+      driver:
+        type: time
+        duration_ms: 800
+      easing: easeOutCubic
+      trigger:
+        type: on_page_load
+        delay_ms: 300
+      target_elements:
+        - selector: "{target1}"
+          tracks:
+            y: {from: 30, to: 0, unit: "px"}
+            opacity: {from: 0, to: 1}
+          delay_ms: 0
+        - selector: "{target2}"
+          tracks:
+            y: {from: 30, to: 0, unit: "px"}
+            opacity: {from: 0, to: 1}
+          delay_ms: 200
+        - selector: "{target3}"
+          tracks:
+            y: {from: 30, to: 0, unit: "px"}
+            opacity: {from: 0, to: 1}
+          delay_ms: 400
+
+pattern_composition:
+  description: "Patterns can be combined for complex animations"
+  examples:
+    - name: "Card Grid Reveal"
+      patterns: [scroll_reveal, stagger_animation]
+      description: "Cards fade/slide in with stagger when grid enters viewport"
+
+    - name: "Hero with Parallax Background"
+      patterns: [fade_slide_sequence, parallax]
+      description: "Hero content fades in while background has parallax effect"
+
+notes:
+  - "Patterns are implementation-neutral semantic templates"
+  - "Parameters make patterns reusable across contexts"
+  - "Variants provide common modifications without creating new patterns"
+  - "Natural language triggers enable intent-to-pattern matching"

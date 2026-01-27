@@ -1,0 +1,215 @@
+# Web Motion Domain Pack - Backend Mappings (L3)
+# Maps semantic patterns to specific implementation technologies
+
+domain: web_motion
+version: 1.0.0
+description: Technology-specific implementation mappings for web animation patterns
+
+# L3: Implementation Plan Structure
+backends:
+  - id: react_css
+    name: "React + CSS Animations"
+    type: declarative
+    capabilities:
+      - Simple transitions
+      - Keyframe animations
+      - IntersectionObserver for viewport triggers
+    limitations:
+      - No complex timeline control
+      - Limited easing functions (cubic-bezier only)
+      - No scroll-linked animations (requires JS)
+
+    pattern_mappings:
+      scroll_reveal:
+        strategy: "CSS keyframes + IntersectionObserver + React state"
+        files:
+          - type: react_component
+            generator: "generators/react_css_scroll_reveal.py"
+          - type: css
+            generator: "generators/css_keyframes.py"
+
+      hover_lift:
+        strategy: "Pure CSS :hover pseudo-class"
+        files:
+          - type: css
+            generator: "generators/css_hover.py"
+
+      stagger_animation:
+        strategy: "CSS animation-delay on nth-child"
+        files:
+          - type: css
+            generator: "generators/css_stagger.py"
+
+  - id: gsap
+    name: "GSAP (GreenSock Animation Platform)"
+    type: imperative
+    capabilities:
+      - Full timeline control
+      - Advanced easing (elastic, bounce, etc.)
+      - Scroll-linked animations (ScrollTrigger plugin)
+      - Complex choreography
+    limitations:
+      - External dependency (~50KB)
+      - Requires JavaScript
+
+    pattern_mappings:
+      scroll_reveal:
+        strategy: "gsap.fromTo() + ScrollTrigger"
+        files:
+          - type: react_component
+            generator: "generators/gsap_scroll_reveal.py"
+
+      parallax:
+        strategy: "gsap.to() + ScrollTrigger with scrub"
+        files:
+          - type: react_component
+            generator: "generators/gsap_parallax.py"
+
+      stagger_animation:
+        strategy: "gsap.timeline() with stagger parameter"
+        files:
+          - type: react_component
+            generator: "generators/gsap_stagger.py"
+
+      number_counter:
+        strategy: "gsap.to() animating object property + onUpdate"
+        files:
+          - type: react_component
+            generator: "generators/gsap_counter.py"
+
+  - id: framer_motion
+    name: "Framer Motion (React)"
+    type: declarative
+    capabilities:
+      - Declarative React animations
+      - Built-in variants system
+      - Viewport detection (whileInView)
+      - Spring physics
+    limitations:
+      - React-only
+      - Limited scroll-linked control
+      - External dependency (~30KB)
+
+    pattern_mappings:
+      scroll_reveal:
+        strategy: "motion.div with initial + whileInView"
+        files:
+          - type: react_component
+            generator: "generators/framer_scroll_reveal.py"
+
+      hover_lift:
+        strategy: "motion.div with whileHover"
+        files:
+          - type: react_component
+            generator: "generators/framer_hover.py"
+
+      stagger_animation:
+        strategy: "variants with staggerChildren"
+        files:
+          - type: react_component
+            generator: "generators/framer_stagger.py"
+
+  - id: waapi
+    name: "Web Animations API"
+    type: imperative
+    capabilities:
+      - Native browser API (no dependencies)
+      - Good performance
+      - Timeline control
+    limitations:
+      - Browser compatibility concerns (IE not supported)
+      - More verbose than libraries
+      - No built-in scroll triggers
+
+    pattern_mappings:
+      scroll_reveal:
+        strategy: "element.animate() + IntersectionObserver"
+        files:
+          - type: react_component
+            generator: "generators/waapi_scroll_reveal.py"
+
+      hover_lift:
+        strategy: "element.animate() on mouseenter/mouseleave"
+        files:
+          - type: react_component
+            generator: "generators/waapi_hover.py"
+
+  - id: css_only
+    name: "Pure CSS"
+    type: declarative
+    capabilities:
+      - Zero dependencies
+      - Excellent performance
+      - Simple hover/focus animations
+    limitations:
+      - No viewport detection (unless using CSS Scroll-Driven Animations)
+      - Limited timing control
+      - No scroll-linked animations (older browsers)
+
+    pattern_mappings:
+      hover_lift:
+        strategy: "transition + :hover"
+        files:
+          - type: css
+            generator: "generators/css_pure_hover.py"
+
+      fade_slide_sequence:
+        strategy: "animation + animation-delay"
+        files:
+          - type: css
+            generator: "generators/css_sequence.py"
+
+# Backend Selection Rules
+selection_criteria:
+  prefer_react_css:
+    - pattern_complexity: simple
+    - dependency_tolerance: low
+    - examples: [hover_lift, simple scroll_reveal]
+
+  prefer_gsap:
+    - pattern_complexity: high
+    - scroll_linked: true
+    - timeline_control: required
+    - examples: [parallax, complex_sequence, number_counter]
+
+  prefer_framer_motion:
+    - framework: react
+    - declarative_preference: high
+    - pattern_complexity: medium
+    - examples: [scroll_reveal, stagger_animation]
+
+  prefer_waapi:
+    - dependency_tolerance: zero
+    - pattern_complexity: medium
+    - browser_support: modern_only
+
+  prefer_css_only:
+    - dependency_tolerance: zero
+    - pattern_complexity: very_simple
+    - examples: [hover_lift, simple_fade]
+
+# Technology Stack Context
+# Use this to inform backend selection based on project stack
+stack_detection:
+  indicators:
+    react: "package.json contains 'react'"
+    vue: "package.json contains 'vue'"
+    gsap_installed: "package.json contains 'gsap'"
+    framer_installed: "package.json contains 'framer-motion'"
+
+  recommendations:
+    if_react_exists:
+      primary: framer_motion
+      fallback: react_css
+    if_no_framework:
+      primary: css_only
+      fallback: waapi
+    if_gsap_installed:
+      primary: gsap
+      reason: "Already in bundle, no additional cost"
+
+notes:
+  - "Backend selection happens at L2→L3 transition"
+  - "User can override automatic selection"
+  - "Generators (Python scripts) produce actual code artifacts"
+  - "Each generator follows template: semantic_spec → code string"

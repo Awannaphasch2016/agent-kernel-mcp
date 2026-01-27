@@ -1,0 +1,226 @@
+# Agent Kernel Execution Framework
+#
+# This registry defines how Agent-Kernel executes agents via Claude Code's Task tool.
+# The Agent Kernel focuses on METACOGNITION (what to think about) while
+# Claude Code's Task tool handles actual agent execution.
+#
+# Key Architecture:
+#   1. Primitive prompts define WHAT and HOW to think (structure, steps)
+#   2. Primitives declare execution_hints (parallelizable, benefits_from_*)
+#   3. /step reads hints + evaluates context → decides execution strategy
+#   4. Claude Code Task tool spawns actual agents
+#
+# The Cognitive Architecture:
+#   ┌─────────────────────────────────────────────────────────────┐
+#   │  METACOGNITION (Agent-Kernel)                                │
+#   │  "Thinking about thinking"                                   │
+#   │  Knows WHICH primitives to activate                          │
+#   │  Monitors whether thinking produces progress (gradient)      │
+#   ├─────────────────────────────────────────────────────────────┤
+#   │  EXECUTION (Claude Code Task Tool)                           │
+#   │  "The actual agent execution"                                │
+#   │  Task tool spawns agents that do work                        │
+#   │  Single agent or parallel (run_in_background: true)          │
+#   ├─────────────────────────────────────────────────────────────┤
+#   │  ACTIVATION PATTERNS (Agents)                                │
+#   │  "Concepts that produce behavior when instantiated"          │
+#   │  "coder" = pattern for "how to produce code"                 │
+#   │  "researcher" = pattern for "how to gather information"      │
+#   ├─────────────────────────────────────────────────────────────┤
+#   │  NEURAL SUBSTRATE (Claude API)                               │
+#   │  Token prediction = pattern completion                       │
+#   └─────────────────────────────────────────────────────────────┘
+
+version: "2.1"
+description: |
+  Agent Kernel Execution Framework.
+
+  The kernel uses Claude Code's Task tool for agent execution.
+  No external coordination layer required.
+
+# =============================================================================
+# EXECUTION BACKEND
+# =============================================================================
+
+execution_backend:
+  name: "Claude Code Task Tool"
+  version: "1.0"
+
+  capabilities:
+    single_agent: true        # Execute with 1 agent
+    parallel_agents: true     # Execute with N agents (run_in_background)
+
+  constraints:
+    max_concurrent: 10
+    context_size_per_agent: 200000  # 200k tokens
+    timeout_ms: 600000              # 10 minutes default
+
+# =============================================================================
+# DYNAMIC AGENT DECISION (/step determines this)
+# =============================================================================
+
+agent_decision:
+  description: |
+    How /step dynamically decides execution strategy per primitive.
+    This is context-aware, not statically bound.
+
+  factors:
+    # From primitive's execution_hints (metadata.yaml)
+    primitive_hints:
+      parallelizable: "Can this primitive benefit from parallel execution?"
+      benefits_from_multiple_perspectives: "Does diverse viewpoints help?"
+      requires_coherence: "Does output need single-voice consistency?"
+      max_agents: "Upper bound from primitive definition"
+
+    # From task context (evaluated at runtime)
+    context:
+      option_space_size: "How many alternatives might exist?"
+      task_complexity: "Low/medium/high complexity score"
+      task_phase: "exploration vs implementation vs verification"
+
+  decision_rules:
+    - name: "Single Agent"
+      condition: |
+        primitive.requires_coherence = true OR
+        context.task_phase = "implementation" OR
+        primitive.parallelizable = false
+      result:
+        agents: 1
+      rationale: "Sequential work needs coherent single perspective"
+
+    - name: "Parallel Exploration"
+      condition: |
+        primitive.parallelizable = true AND
+        primitive.benefits_from_multiple_perspectives = true AND
+        context.option_space_size >= 3
+      result:
+        agents: "min(option_space_size, primitive.max_agents)"
+      rationale: "Exploration benefits from diverse parallel search"
+
+    - name: "Parallel Verification"
+      condition: |
+        primitive.parallelizable = true AND
+        context.task_phase = "verification" AND
+        evidence_layers >= 2
+      result:
+        agents: "min(evidence_layers, 4)"
+      rationale: "Parallel verification across evidence layers"
+
+# =============================================================================
+# EXECUTION PATTERNS
+# =============================================================================
+
+execution_patterns:
+  focused:
+    description: "Single-agent, sequential execution"
+    cognitive_analogy: "Focused attention on one problem"
+    when: "Implementation, coherence-requiring work"
+    mechanics:
+      agents: 1
+      execution: |
+        Task({
+          prompt: "{primitive.prompt}",
+          subagent_type: "{agent_type}"
+        })
+
+  parallel_explore:
+    description: "Multi-agent parallel exploration"
+    cognitive_analogy: "Brainstorming, multiple perspectives"
+    when: "Exploration, option enumeration"
+    mechanics:
+      agents: "dynamic (2-5)"
+      execution: |
+        # Spawn N agents in parallel, each exploring different angle
+        for angle in partitions:
+          Task({
+            prompt: "{primitive.prompt} Focus: {angle}",
+            subagent_type: "researcher",
+            run_in_background: true
+          })
+
+  parallel_verify:
+    description: "Multi-agent verification across layers"
+    cognitive_analogy: "Cross-checking from multiple angles"
+    when: "Validation, evidence gathering"
+    mechanics:
+      agents: "dynamic (2-4)"
+      execution: |
+        # One agent per evidence layer
+        for layer in [L1_surface, L2_content, L3_observability, L4_ground_truth]:
+          Task({
+            prompt: "{primitive.prompt} Verify at: {layer}",
+            subagent_type: "reviewer",
+            run_in_background: true
+          })
+
+# =============================================================================
+# MODEL ROUTING TIERS
+# =============================================================================
+
+model_routing:
+  description: |
+    3-tier model routing for cost/performance optimization.
+    Applied per-agent.
+
+  tiers:
+    tier_1:
+      name: "Direct Edit"
+      latency: "<1ms"
+      cost: "$0"
+      use_cases:
+        - var-to-const
+        - add-types
+        - add-error-handling
+        - async-await
+        - add-logging
+        - remove-console
+      action: "Skip LLM, use Edit tool directly"
+
+    tier_2:
+      name: "Haiku"
+      latency: "~500ms"
+      cost: "$0.0002"
+      use_cases:
+        - simple_tasks
+        - bug_fixes
+        - low_complexity
+        - quick_lookups
+        - parallel_exploration
+      model: haiku
+
+    tier_3:
+      name: "Sonnet/Opus"
+      latency: "2-5s"
+      cost: "$0.003-$0.015"
+      use_cases:
+        - architecture
+        - security
+        - complex_reasoning
+        - multi-file_changes
+      model: "sonnet (default) | opus (critical)"
+
+# =============================================================================
+# MESSAGE PROTOCOL
+# =============================================================================
+
+message_protocol:
+  description: |
+    All agents produce Messages compatible with Thinking Tuple routing.
+
+  message_schema:
+    content: "string | object"
+    tuple_binding:
+      slot: "Constraints | Invariant | Principles | Strategy | Check"
+      effect: "expand | define | guide | plan | verify"
+    metadata:
+      pattern: "string (execution pattern used)"
+      agents: "number (how many agents)"
+      model: "string (model used)"
+      timestamp: "ISO8601"
+
+  routing_rules:
+    - "Messages with tuple_binding route to specified slot"
+    - "Effect determines how message modifies slot (append vs replace)"
+    - "Multiple messages to same slot accumulate (expand effect)"
+    - "Check slot messages trigger invariant evaluation"
+    - "Multi-agent results are merged before routing"

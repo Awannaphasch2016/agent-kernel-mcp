@@ -1,0 +1,2697 @@
+# Unified Agent Kernel Protocol Schema
+#
+# This schema defines the formal type system for ALL Agent Kernel components.
+# Every skill, command, principle, DSLP, and spec shares this common structure.
+#
+# Architecture:
+#   - All components are typed records with (entities, relations, properties)
+#   - Properties can be domain-agnostic (NULL) or domain-polymorphic (domain=X)
+#   - Every component declares its Thinking Tuple binding
+#   - Components become typed messages for agent communication
+#
+# Benefits:
+#   - Agents speak the same protocol
+#   - Orchestration is formal routing
+#   - Parallel execution is message passing
+#   - Components are interchangeable message types
+
+version: "2.1"
+name: agent_kernel_protocol
+last_updated: "2026-01-25"
+
+# =============================================================================
+# CORE TYPE DEFINITIONS
+# =============================================================================
+
+types:
+  # ---------------------------------------------------------------------------
+  # Domain - A knowledge area with its own ontology
+  # ---------------------------------------------------------------------------
+  Domain:
+    description: "A domain defines an ontology for a specific area of knowledge"
+    fields:
+      name:
+        type: string
+        required: true
+        description: "Domain identifier (e.g., 'website', 'api', 'animation')"
+      ontology:
+        type: Ontology
+        required: true
+        description: "The set of entities and concepts in this domain"
+      actions:
+        type: "Action[]"
+        required: false
+        description: "Domain-specific actions/verbs"
+      dsl_reference:
+        type: string
+        required: false
+        description: "Reference to DSL in domain_packs registry"
+
+  # ---------------------------------------------------------------------------
+  # Ontology - What exists in a domain
+  # ---------------------------------------------------------------------------
+  Ontology:
+    description: "The set of entities and concepts that exist in a domain"
+    fields:
+      entities:
+        type: "Entity[]"
+        required: true
+        description: "Things that exist in this domain"
+      relations:
+        type: "Relation[]"
+        required: false
+        description: "How entities interact in this domain"
+
+  # ---------------------------------------------------------------------------
+  # Entity - A thing that exists
+  # ---------------------------------------------------------------------------
+  Entity:
+    description: "A thing that exists in a domain"
+    fields:
+      type:
+        type: string
+        required: true
+        description: "Entity type name"
+      subtypes:
+        type: "string[]"
+        required: false
+        description: "Specializations of this entity"
+      cardinality:
+        type: string
+        required: false
+        description: "How many can exist (1, 0..1, 1..*, 3+)"
+      description:
+        type: string
+        required: false
+        description: "Human-readable description"
+
+  # ---------------------------------------------------------------------------
+  # Relation - How entities interact
+  # ---------------------------------------------------------------------------
+  Relation:
+    description: "A relationship between entities"
+    fields:
+      type:
+        type: string
+        required: true
+        description: "Relation type (generates, contains, prevents, enables, etc.)"
+      from:
+        type: "Entity | string"
+        required: true
+        description: "Source entity"
+      to:
+        type: "Entity | string"
+        required: true
+        description: "Target entity"
+      cardinality:
+        type: string
+        required: false
+        description: "Relationship cardinality (1:1, 1:N, N:M)"
+
+  # ---------------------------------------------------------------------------
+  # Property - A characteristic that can be true of an entity
+  # ---------------------------------------------------------------------------
+  Property:
+    description: "A characteristic or attribute of an entity"
+    fields:
+      name:
+        type: string
+        required: true
+        description: "Property name"
+      domain:
+        type: "Domain | null"
+        required: true
+        description: "null = domain-agnostic, Domain = domain-specific"
+      value:
+        type: any
+        required: false
+        description: "Property value"
+      value_type:
+        type: string
+        required: false
+        description: "Type of the value (string, number, boolean, enum)"
+
+  # ---------------------------------------------------------------------------
+  # Action - A domain-specific verb/operation (atomic, instantaneous)
+  # ---------------------------------------------------------------------------
+  Action:
+    description: "A domain-specific atomic action or verb (instantaneous)"
+    fields:
+      name:
+        type: string
+        required: true
+        description: "Action name (e.g., 'build', 'deploy', 'validate')"
+      input_entities:
+        type: "Entity[]"
+        required: false
+        description: "Entities this action operates on"
+      output_entities:
+        type: "Entity[]"
+        required: false
+        description: "Entities this action produces"
+      preconditions:
+        type: "Constraint[]"
+        required: false
+        description: "Constraints that must hold before action"
+      postconditions:
+        type: "Constraint[]"
+        required: false
+        description: "Constraints that will hold after action"
+
+  # ===========================================================================
+  # METAPHYSICAL PRIMITIVES (Complete 11-Primitive Ontology)
+  # ===========================================================================
+  #
+  # The Agent Kernel ontology is built on 11 irreducible metaphysical primitives:
+  #
+  #   STATIC (What exists)          DYNAMIC (What happens)
+  #   ─────────────────────         ─────────────────────
+  #   Entity (things)               Event (instantaneous occurrence)
+  #   Property (attributes)         Process (extended activity)
+  #   Relation (connections)        State (snapshots in time)
+  #   Constraint (limits)           Context (framing conditions)
+  #
+  #   COMPUTATIONAL (How to derive and reason)
+  #   ─────────────────────────────────────────
+  #   Function (input→output mappings)
+  #   Identity (same-entity-across-time criteria)
+  #   Modality (alternative worlds/perspectives)
+  #
+  # These primitives enable precise reasoning about structure, behavior, and logic.
+  #
+
+  # ---------------------------------------------------------------------------
+  # Constraint - What must hold (unified constraint type)
+  # ---------------------------------------------------------------------------
+  Constraint:
+    description: |
+      A condition that must hold. Unifies all constraint-like concepts:
+      preconditions, postconditions, invariants, cardinality limits, temporal bounds.
+      This is the foundation for /invariant command and verification.
+    fields:
+      name:
+        type: string
+        required: true
+        description: "Constraint identifier"
+      type:
+        type: enum
+        values:
+          - precondition     # Must hold before action/process
+          - postcondition    # Must hold after action/process
+          - invariant        # Must hold throughout
+          - cardinality      # Numeric bounds on entities
+          - temporal         # Time-based constraints
+          - access           # Permission/capability constraints
+        required: true
+        description: "Kind of constraint"
+      expression:
+        type: string
+        required: true
+        description: "What must hold (natural language or formal)"
+      scope:
+        type: "Entity | Relation | State | Process | string"
+        required: false
+        description: "What this constraint applies to"
+      violation_severity:
+        type: enum
+        values: [error, warning, info]
+        default: error
+        description: "How serious is violation"
+      verification_method:
+        type: string
+        required: false
+        description: "How to check this constraint"
+
+  # ---------------------------------------------------------------------------
+  # State - A snapshot in time (discrete configuration)
+  # ---------------------------------------------------------------------------
+  State:
+    description: |
+      A discrete configuration of an entity or system at a point in time.
+      States enable state machine reasoning with valid transitions.
+      Used by ThinkingTuple.status, RuntimeState, and /run gradient tracking.
+    fields:
+      name:
+        type: string
+        required: true
+        description: "State identifier (e.g., 'pending', 'running', 'completed')"
+      description:
+        type: string
+        required: false
+        description: "Human-readable description"
+      invariants:
+        type: "Constraint[]"
+        required: false
+        description: "Constraints that must hold while in this state"
+      valid_transitions:
+        type: "State[]"
+        required: false
+        description: "States that can be transitioned to from this state"
+      entry_actions:
+        type: "Action[]"
+        required: false
+        description: "Actions executed on entering this state"
+      exit_actions:
+        type: "Action[]"
+        required: false
+        description: "Actions executed on leaving this state"
+
+  # ---------------------------------------------------------------------------
+  # Event - An instantaneous occurrence
+  # ---------------------------------------------------------------------------
+  Event:
+    description: |
+      A discrete occurrence at a point in time. Events trigger state transitions,
+      actions, or processes. Events are immutable facts once they occur.
+      Used for observability, audit trails, and event-driven reasoning.
+    fields:
+      type:
+        type: string
+        required: true
+        description: "Event type (e.g., 'command_invoked', 'state_changed', 'error_occurred')"
+      timestamp:
+        type: datetime
+        required: true
+        description: "When the event occurred"
+      source:
+        type: "Entity | Agent | string"
+        required: false
+        description: "What/who produced this event"
+      payload:
+        type: any
+        required: false
+        description: "Event-specific data"
+      triggers:
+        type: "Action | Process | State"
+        required: false
+        description: "What this event triggers"
+      correlates_with:
+        type: "Event[]"
+        required: false
+        description: "Related events for causal tracing"
+
+  # ---------------------------------------------------------------------------
+  # Process - An extended activity with ordered steps
+  # ---------------------------------------------------------------------------
+  Process:
+    description: |
+      An extended activity that unfolds over time, consisting of ordered steps.
+      Unlike atomic Actions, Processes have duration and can be observed mid-execution.
+      Replaces 'composite' commands - processes are sequences with implied ordering.
+
+      With execution_mode=pipeline, processes can have parallel execution within stages.
+    fields:
+      name:
+        type: string
+        required: true
+        description: "Process identifier"
+      description:
+        type: string
+        required: false
+        description: "What this process accomplishes"
+      steps:
+        type: "Action[] | Process[]"
+        required: true
+        description: "Ordered sequence of actions or sub-processes"
+      execution_mode:
+        type: enum
+        values:
+          - sequential      # Default: step → step → step
+          - parallel        # All steps run simultaneously
+          - pipeline        # Stages sequential, within-stage parallel
+          - adaptive        # Claude decides based on dependencies
+        default: sequential
+        description: "How to execute the steps"
+      stages:
+        type: "Stage[]"
+        required: false
+        description: "For pipeline mode: ordered stages with parallel agents"
+      preconditions:
+        type: "Constraint[]"
+        required: false
+        description: "Must hold before process starts"
+      postconditions:
+        type: "Constraint[]"
+        required: false
+        description: "Must hold after process completes"
+      invariants:
+        type: "Constraint[]"
+        required: false
+        description: "Must hold throughout process execution"
+      initial_state:
+        type: State
+        required: false
+        description: "State before process starts"
+      final_state:
+        type: State
+        required: false
+        description: "State after process completes"
+      events_emitted:
+        type: "Event[]"
+        required: false
+        description: "Events produced during process"
+
+  # ---------------------------------------------------------------------------
+  # Stage - A phase in a pipeline process
+  # ---------------------------------------------------------------------------
+  Stage:
+    description: |
+      A phase in a pipeline process with parallel agent execution.
+      Stages execute sequentially, but agents within a stage run in parallel.
+    fields:
+      name:
+        type: string
+        required: true
+        description: "Stage identifier"
+      description:
+        type: string
+        required: false
+        description: "What this stage accomplishes"
+      agents:
+        type: "Agent[]"
+        required: true
+        max_length: 10
+        description: "Agents to run in parallel within this stage"
+      barrier:
+        type: enum
+        values:
+          - all_complete    # Wait for all agents
+          - any_complete    # Proceed when first completes
+          - majority        # Proceed when >50% complete
+          - quorum          # Proceed when N agents complete
+        default: all_complete
+        description: "Synchronization behavior"
+      quorum_count:
+        type: number
+        required: false
+        description: "For barrier=quorum: how many agents needed"
+      timeout:
+        type: number
+        required: false
+        description: "Stage timeout in milliseconds"
+      on_timeout:
+        type: enum
+        values:
+          - fail            # Fail the pipeline
+          - continue        # Use partial results
+          - retry           # Retry failed agents
+        default: fail
+        description: "Behavior when timeout reached"
+      input_from:
+        type: "string | string[]"
+        required: false
+        description: "Stage(s) whose output feeds this stage"
+      output:
+        type: "Message[]"
+        required: false
+        description: "Aggregated output from stage agents"
+
+  # ---------------------------------------------------------------------------
+  # Context - Framing conditions for reasoning
+  # ---------------------------------------------------------------------------
+  Context:
+    description: |
+      The framing conditions that scope reasoning and action.
+      Context determines which principles apply, what domain vocabulary to use,
+      and what environmental constraints exist.
+    fields:
+      name:
+        type: string
+        required: false
+        description: "Context identifier"
+      domain:
+        type: Domain
+        required: false
+        description: "Active domain (website, api, animation, etc.)"
+      task:
+        type: string
+        required: false
+        description: "Current task being executed"
+      active_principles:
+        type: "Principle[]"
+        required: false
+        description: "Principles currently in scope (Tier-0 + task-specific)"
+      environment:
+        type: "Property[]"
+        required: false
+        description: "Environmental properties (ENV vars, configs, etc.)"
+      temporal_scope:
+        type: object
+        required: false
+        fields:
+          start: datetime
+          end: datetime
+        description: "Time range this context applies to"
+      parent_context:
+        type: Context
+        required: false
+        description: "Enclosing context (for nested reasoning)"
+
+  # ===========================================================================
+  # COMPUTATIONAL PRIMITIVES (How to derive and reason)
+  # ===========================================================================
+  #
+  # These primitives capture the computational/logical aspects of reasoning:
+  #
+  #   Function  - How to compute/derive values (input→output mappings)
+  #   Identity  - What makes X the same X across time/mutation
+  #   Modality  - Alternative worlds/perspectives for reasoning
+  #
+  # These enable formal treatment of gradient evaluation, sameness verification,
+  # and hypothetical reasoning (what-if analysis).
+  #
+
+  # ---------------------------------------------------------------------------
+  # Function - A mapping from inputs to outputs
+  # ---------------------------------------------------------------------------
+  Function:
+    description: |
+      A computation that maps inputs to outputs, evaluated at runtime.
+      Functions differ from Constraints: Constraints say what MUST be true,
+      Functions say HOW to compute something.
+
+      Used for: gradient evaluation, interpolation, delta calculation,
+      sameness scoring, property derivation.
+    fields:
+      name:
+        type: string
+        required: true
+        description: "Function identifier (e.g., 'evaluate_gradient', 'lerp', 'delta')"
+      inputs:
+        type: "Property[] | Entity[] | any[]"
+        required: true
+        description: "Input parameters to the function"
+      output:
+        type: "Property | Entity | any"
+        required: true
+        description: "What the function produces"
+      expression:
+        type: string
+        required: false
+        description: "How to compute (natural language or formal)"
+      domain:
+        type: "Domain | null"
+        required: false
+        description: "Domain-specific or domain-agnostic function"
+      pure:
+        type: boolean
+        default: true
+        description: "True if function has no side effects (same inputs → same output)"
+      composable_with:
+        type: "Function[]"
+        required: false
+        description: "Functions this can be composed with"
+
+  # ---------------------------------------------------------------------------
+  # Identity - What makes an entity the same entity across time
+  # ---------------------------------------------------------------------------
+  Identity:
+    description: |
+      Defines what makes an entity THE SAME entity across time, mutation, or
+      different implementations. This is critical for sameness verification:
+      "Is clone.button the SAME button as original.button?"
+
+      Identity answers: Which properties DEFINE the entity vs which are INCIDENTAL?
+
+      Used for: sameness verification, state machine persistence, agent memory,
+      keyframe interpolation semantics, timeline continuity.
+    fields:
+      name:
+        type: string
+        required: true
+        description: "Identity schema name (e.g., 'button_identity', 'agent_identity')"
+      entity_type:
+        type: "Entity | string"
+        required: true
+        description: "What kind of entity this identity applies to"
+      criteria:
+        type: "Property[]"
+        required: true
+        description: "Properties that DEFINE identity (must match for 'same entity')"
+      incidental:
+        type: "Property[]"
+        required: false
+        description: "Properties that can differ without breaking identity"
+      persistence:
+        type: enum
+        values:
+          - immutable          # Identity never changes
+          - mutable_within_bounds  # Can change within constraints
+          - evolving           # Expected to change over time
+        required: false
+        description: "How identity behaves over time"
+      trace:
+        type: "State[]"
+        required: false
+        description: "History of states while maintaining identity"
+      verification_function:
+        type: Function
+        required: false
+        description: "How to verify two entities have same identity"
+
+  # ---------------------------------------------------------------------------
+  # Modality - Alternative worlds or perspectives
+  # ---------------------------------------------------------------------------
+  Modality:
+    description: |
+      Represents alternative worlds or "ways something can be."
+      Modalities enable hypothetical reasoning, perspective switching,
+      and modal logic for agent reasoning.
+
+      Used for: what-if analysis, viewport vs world-space animation,
+      divergent vs convergent thinking modes, sticky vs non-sticky contexts,
+      hypothetical scenario evaluation.
+
+      This is what enables the Thinking Tuple to shift modes properly.
+    fields:
+      name:
+        type: string
+        required: true
+        description: "Modality identifier (e.g., 'world_redis', 'divergent_mode')"
+      base_context:
+        type: Context
+        required: false
+        description: "The base context this modality modifies"
+      assumptions:
+        type: "Constraint[]"
+        required: false
+        description: "What is assumed true in this modality"
+      transformations:
+        type: "Function[]"
+        required: false
+        description: "How this modality transforms the base context"
+      accessibility:
+        type: "Modality[]"
+        required: false
+        description: "Other modalities reachable from this one (modal logic)"
+      is_actual:
+        type: boolean
+        default: false
+        description: "True if this is the actual world (not hypothetical)"
+      reasoning_mode:
+        type: enum
+        values:
+          - divergent    # Generate multiple options (explore)
+          - convergent   # Narrow to single option (consolidate)
+          - causal       # Follow cause-effect chains (trace)
+          - verify       # Test claims (validate)
+          - hypothetical # What-if reasoning
+        required: false
+        description: "The thinking mode active in this modality"
+
+  # ===========================================================================
+  # SEMANTIC INHERITANCE PRIMITIVES (Agent-Native Composability)
+  # ===========================================================================
+  #
+  # The Semantic Inheritance framework enables agent-native inheritance where:
+  #
+  #   Template     - Abstract structure with slots that children fill
+  #   Slot         - A placeholder in a template that children instantiate
+  #   Voice        - Child's explanation of HOW it wants to inherit
+  #   MergeStrategy- How to combine capabilities from multiple parents
+  #
+  # Key insight: Traditional OOP inheritance uses method dispatch at runtime.
+  # Agent-native inheritance uses template expansion at prompt construction time.
+  # The child has a "voice" to explain its inheritance intent semantically.
+  #
+
+  # ---------------------------------------------------------------------------
+  # Template - Abstract structure with slots
+  # ---------------------------------------------------------------------------
+  Template:
+    description: |
+      An abstract structure that defines slots for children to fill.
+      Templates are the agent-native equivalent of abstract classes.
+
+      Unlike OOP classes, templates are expanded at prompt construction time,
+      not dispatched at runtime. Children "fill in" slots with prompts.
+    fields:
+      name:
+        type: string
+        required: true
+        description: "Template identifier (e.g., 'investigator', 'synthesizer')"
+      description:
+        type: string
+        required: false
+        description: "What this template provides"
+      version:
+        type: string
+        required: false
+        description: "Template version"
+      slots:
+        type: "Slot[]"
+        required: true
+        description: "Placeholders that children must or may fill"
+      execution:
+        type: object
+        required: false
+        fields:
+          order:
+            type: "string[]"
+            description: "Default execution order of slots"
+          mode:
+            type: enum
+            values: [sequential, parallel, conditional]
+            description: "How slots are executed by default"
+      invariants:
+        type: "Constraint[]"
+        required: false
+        description: "What must hold for valid template instantiation"
+      extends:
+        type: "Template | string"
+        required: false
+        description: "Parent template this inherits from (single inheritance)"
+
+  # ---------------------------------------------------------------------------
+  # Slot - A placeholder in a template
+  # ---------------------------------------------------------------------------
+  Slot:
+    description: |
+      A placeholder in a template that children instantiate with prompts.
+      Slots are the agent-native equivalent of abstract methods.
+
+      Unlike abstract methods that define signature only, slots can have:
+      - Default implementations (prompts)
+      - Natural language descriptions of expected behavior
+      - Required vs optional status
+    fields:
+      name:
+        type: string
+        required: true
+        description: "Slot identifier (e.g., 'gather', 'analyze', 'conclude')"
+      type:
+        type: enum
+        values:
+          - prompt      # Filled with natural language prompt
+          - function    # Filled with Function reference
+          - process     # Filled with Process reference
+          - template    # Filled with nested template (composition)
+        default: prompt
+        description: "What kind of content fills this slot"
+      required:
+        type: boolean
+        default: true
+        description: "Must children fill this slot?"
+      description:
+        type: string
+        required: true
+        description: "Natural language description of expected behavior"
+      default:
+        type: string
+        required: false
+        description: "Default prompt if child doesn't fill"
+      constraints:
+        type: "Constraint[]"
+        required: false
+        description: "What must hold for valid slot instantiation"
+      examples:
+        type: "string[]"
+        required: false
+        description: "Example fills to guide children"
+
+  # ---------------------------------------------------------------------------
+  # Voice - Child's explanation of inheritance intent
+  # ---------------------------------------------------------------------------
+  Voice:
+    description: |
+      A child component's explanation of HOW it wants to inherit from parent(s).
+      Voice enables semantic merge resolution by expressing intent rather than
+      just structural override.
+
+      This is what makes agent inheritance "semantic" - the child explains WHY
+      and HOW it wants to inherit, allowing Claude to resolve merges intelligently.
+
+      Key insight: In OOP, merge semantics are predetermined by MRO.
+      With Voice, the child participates in merge resolution through intent.
+    fields:
+      slot:
+        type: string
+        required: true
+        description: "Which parent slot this voice addresses"
+      parent:
+        type: "Template | string"
+        required: false
+        description: "Which parent (if multi-inheritance) - defaults to single parent"
+      intent:
+        type: string
+        required: true
+        description: |
+          Natural language explanation of desired inheritance behavior.
+          Claude interprets this to generate the appropriate merge strategy.
+          This is the core of semantic inheritance.
+      directive:
+        type: enum
+        values:
+          - before      # Child first, then parent
+          - after       # Parent first, then child (like super())
+          - instead     # Replace parent completely
+          - wrap        # Child provides context, parent runs inside
+          - filter      # Parent runs, child filters output
+          - transform   # Parent runs, child transforms output
+          - interleave  # Alternate parent and child steps
+          - extend      # Parent + child additions
+        required: false
+        description: "Structural hint for merge (optional, intent takes precedence)"
+      clarification:
+        type: object
+        required: false
+        description: "Structured disambiguation when intent alone is insufficient"
+        fields:
+          when:
+            type: string
+            description: "Conditions when this voice applies"
+          priority:
+            type: number
+            description: "Priority when multiple voices could apply"
+          exceptions:
+            type: "string[]"
+            description: "Cases where this voice doesn't apply"
+      wrapper:
+        type: object
+        required: false
+        description: "For directive=wrap, what comes before/after parent"
+        fields:
+          before:
+            type: string
+            description: "Prompt to execute before parent"
+          after:
+            type: string
+            description: "Prompt to execute after parent"
+
+  # ---------------------------------------------------------------------------
+  # MergeStrategy - How to combine capabilities from multiple parents
+  # ---------------------------------------------------------------------------
+  MergeStrategy:
+    description: |
+      Defines how to merge capabilities when a child extends multiple templates.
+      Unlike OOP's Method Resolution Order (MRO), agent merges are semantic.
+
+      Merge strategies handle the case where Parent A and Parent B both have
+      a slot with the same name (e.g., both have "explore").
+    fields:
+      name:
+        type: string
+        required: true
+        description: "Strategy identifier"
+      mode:
+        type: enum
+        values:
+          - sequential      # A then B (order specified)
+          - parallel        # A and B simultaneously, merge results
+          - interleaved     # A₁, B₁, A₂, B₂, ...
+          - priority        # Use A, fallback to B
+          - compose         # A(B(input)) - function composition
+          - synthesize      # Claude synthesizes from both
+        required: true
+        description: "How to combine the parent implementations"
+      order:
+        type: "string[]"
+        required: false
+        description: "For sequential/priority: which parent first"
+      synthesis_prompt:
+        type: string
+        required: false
+        description: "For synthesize: how to combine semantically"
+      conflict_resolution:
+        type: enum
+        values:
+          - child_wins      # Child's voice takes precedence
+          - first_parent    # First parent in extends list wins
+          - explicit_only   # Must have explicit merge for each slot
+          - error           # Raise error on conflict
+        default: child_wins
+        description: "How to handle unspecified conflicts"
+
+  # ---------------------------------------------------------------------------
+  # TemplateInstance - A concrete instantiation of a template
+  # ---------------------------------------------------------------------------
+  TemplateInstance:
+    description: |
+      A concrete component that instantiates one or more templates.
+      This is the "child class" in agent-native inheritance.
+
+      TemplateInstance has:
+      - extends: which template(s) it inherits from
+      - fills: concrete prompts for parent slots
+      - voice: how it wants to inherit (semantic intent)
+      - merge: how to combine multiple parents
+    fields:
+      id:
+        type: string
+        required: true
+        description: "Instance identifier"
+      name:
+        type: string
+        required: true
+        description: "Human-readable name"
+      description:
+        type: string
+        required: false
+        description: "What this instance does"
+      extends:
+        type: "Template[] | string[]"
+        required: true
+        description: "Template(s) this inherits from"
+      fills:
+        type: object
+        required: false
+        description: |
+          Slot name → prompt mapping.
+          Simple slot filling without semantic nuance.
+        additionalProperties:
+          type: string
+      voice:
+        type: "Voice[]"
+        required: false
+        description: |
+          Semantic inheritance declarations.
+          Child explains HOW it wants to inherit each slot.
+      merge:
+        type: object
+        required: false
+        description: "Merge strategies for multi-inheritance"
+        additionalProperties:
+          type: MergeStrategy
+      additional_slots:
+        type: "Slot[]"
+        required: false
+        description: "New slots defined by this instance (extension)"
+      constraints:
+        type: "Constraint[]"
+        required: false
+        description: "Additional constraints beyond parent's"
+      tuple_binding:
+        type: TupleBinding
+        required: false
+        description: "How this instance affects the Thinking Tuple"
+
+  # ---------------------------------------------------------------------------
+  # TemplateRegistry - Collection of available templates
+  # ---------------------------------------------------------------------------
+  TemplateRegistry:
+    description: |
+      Registry of all available templates in the Agent Kernel.
+      Templates are discovered from .claude/templates/ directory.
+    fields:
+      version:
+        type: string
+        required: true
+      templates:
+        type: "Template[]"
+        required: true
+        description: "All registered templates"
+      categories:
+        type: object
+        description: "Templates organized by purpose"
+        properties:
+          reasoning:
+            type: "string[]"
+            description: "Templates for thinking patterns (investigator, synthesizer)"
+          workflow:
+            type: "string[]"
+            description: "Templates for process patterns (deployer, tester)"
+          domain:
+            type: "string[]"
+            description: "Domain-specific templates (web_animator, api_designer)"
+
+  # ---------------------------------------------------------------------------
+  # TupleSlot - Which part of the Thinking Tuple
+  # ---------------------------------------------------------------------------
+  TupleSlot:
+    type: enum
+    values:
+      - Constraints
+      - Invariant
+      - Principles
+      - Strategy
+      - Check
+
+  # ---------------------------------------------------------------------------
+  # TupleEffect - How a component affects its slot
+  # ---------------------------------------------------------------------------
+  TupleEffect:
+    type: enum
+    values:
+      - expand      # Add to existing (Constraints)
+      - define      # Set or refine (Invariant)
+      - guide       # Provide decision rules (Principles)
+      - plan        # Compose execution steps (Strategy)
+      - verify      # Test against criteria (Check)
+
+  # ---------------------------------------------------------------------------
+  # TupleBinding - How a component affects the Thinking Tuple
+  # ---------------------------------------------------------------------------
+  TupleBinding:
+    description: "Declares how a component modifies the Thinking Tuple at runtime"
+    fields:
+      slot:
+        type: TupleSlot
+        required: true
+        description: "Which tuple component is affected"
+      effect:
+        type: TupleEffect
+        required: true
+        description: "How it affects the slot"
+
+  # ---------------------------------------------------------------------------
+  # ComponentType - Classification of Agent Kernel components
+  # ---------------------------------------------------------------------------
+  ComponentType:
+    type: enum
+    values:
+      - command     # Slash-invokable operation
+      - skill       # Domain expertise module
+      - principle   # Decision-making rule
+      - dslp        # Domain-specific language protocol
+      - spec        # Feature specification
+      - guide       # How-to documentation
+
+# =============================================================================
+# COMPONENT SIGNATURE (The Universal Record Structure)
+# =============================================================================
+
+Component:
+  description: |
+    The universal structure for ALL Agent Kernel components.
+    Every skill, command, principle, DSLP, and spec conforms to this signature.
+    This enables uniform processing, routing, and orchestration.
+
+  fields:
+    # --- Identity ---
+    id:
+      type: string
+      required: true
+      description: "Unique identifier for this component"
+
+    type:
+      type: ComponentType
+      required: true
+      description: "What kind of component this is"
+
+    name:
+      type: string
+      required: true
+      description: "Human-readable name"
+
+    description:
+      type: string
+      required: false
+      description: "Brief description of purpose"
+
+    version:
+      type: string
+      required: false
+      description: "Component version"
+
+    # --- Domain Binding ---
+    domain:
+      type: "Domain | null"
+      required: true
+      description: "null = domain-agnostic, Domain = domain-specific"
+
+    # --- Ontological Structure ---
+    entities:
+      type: "Entity[]"
+      required: false
+      description: "Entities this component works with"
+
+    relations:
+      type: "Relation[]"
+      required: false
+      description: "Relationships this component establishes or uses"
+
+    # --- Properties (Domain Polymorphism) ---
+    properties:
+      type: object
+      required: false
+      fields:
+        domain_agnostic:
+          type: "Property[]"
+          description: "Properties that work in any domain"
+        domain_specific:
+          type: "Property[]"
+          description: "Properties that require specific domain context"
+
+    # --- Tuple Binding ---
+    tuple_binding:
+      type: TupleBinding
+      required: true
+      description: "How this component affects the Thinking Tuple"
+
+    # --- Metadata ---
+    tags:
+      type: "string[]"
+      required: false
+      description: "Classification tags for discovery"
+
+    dependencies:
+      type: "string[]"
+      required: false
+      description: "Other components this depends on"
+
+# =============================================================================
+# MESSAGE (Component with Runtime Context)
+# =============================================================================
+
+Message:
+  description: |
+    A Component with runtime context, used for agent-to-agent communication.
+    Messages are the atomic unit of the Agent Kernel Protocol.
+
+  extends: Component
+
+  additional_fields:
+    source_agent:
+      type: string
+      required: true
+      description: "ID of the agent that produced this message"
+
+    timestamp:
+      type: datetime
+      required: true
+      description: "When the message was produced"
+
+    task_context:
+      type: string
+      required: false
+      description: "The task this message relates to"
+
+    payload:
+      type: any
+      required: false
+      description: "Domain-specific data"
+
+    parent_message:
+      type: string
+      required: false
+      description: "ID of message this responds to (for chaining)"
+
+# =============================================================================
+# THINKING TUPLE (Runtime State)
+# =============================================================================
+
+ThinkingTuple:
+  description: |
+    The runtime state container that accumulates messages from agents.
+    Each slot holds messages grouped by their tuple binding.
+
+  fields:
+    Constraints:
+      type: "Message[]"
+      description: "Messages with effect=expand (what we know)"
+
+    Invariant:
+      type: "Message[]"
+      description: "Messages with effect=define (what must be true)"
+
+    Principles:
+      type: "Message[]"
+      description: "Messages with effect=guide (decision rules)"
+
+    Strategy:
+      type: "Message[]"
+      description: "Messages with effect=plan (execution pipeline)"
+
+    Check:
+      type: "Message[]"
+      description: "Messages with effect=verify (verification results)"
+
+    # --- Meta ---
+    task:
+      type: string
+      description: "The task being executed"
+
+    status:
+      type: enum
+      values: [pending, in_progress, complete, failed]
+
+    created_at:
+      type: datetime
+
+    completed_at:
+      type: datetime
+      required: false
+
+# =============================================================================
+# DOMAIN REGISTRY (Mapping of Known Domains)
+# =============================================================================
+
+domain_registry:
+  description: |
+    Known domains and their ontologies.
+    Each domain provides vocabulary for domain-specific properties.
+
+  domains:
+    website:
+      entities:
+        - Element
+        - Appearance
+        - Layout
+        - Behavior
+        - Accessibility
+      relations:
+        - contains
+        - styled_by
+        - positioned_relative_to
+        - responds_to
+      actions:
+        - build
+        - deploy
+        - replicate
+        - validate
+      dsl_reference: "domain_packs/web-motion"
+
+    api:
+      entities:
+        - Endpoint
+        - Request
+        - Response
+        - Schema
+        - Authentication
+      relations:
+        - accepts
+        - returns
+        - validates_with
+        - requires_auth
+      actions:
+        - design
+        - implement
+        - test
+        - document
+      dsl_reference: "domain_packs/api-contract"
+
+    database:
+      entities:
+        - Table
+        - Column
+        - Index
+        - Constraint
+        - Migration
+      relations:
+        - has_column
+        - references
+        - indexed_by
+        - constrained_by
+      actions:
+        - migrate
+        - query
+        - backup
+        - restore
+      dsl_reference: null
+
+    animation:
+      entities:
+        - Keyframe
+        - Easing
+        - Trigger
+        - Timeline
+        - Effect
+      relations:
+        - transitions_to
+        - triggered_by
+        - composed_of
+        - applies_easing
+      actions:
+        - animate
+        - sequence
+        - orchestrate
+      dsl_reference: "domain_packs/web-motion"
+
+    deployment:
+      entities:
+        - Artifact
+        - Environment
+        - Pipeline
+        - Rollback
+        - Health
+      relations:
+        - deploys_to
+        - promotes_from
+        - rolls_back_to
+        - monitors
+      actions:
+        - deploy
+        - promote
+        - rollback
+        - verify
+      dsl_reference: null
+
+    verification:
+      entities:
+        - Claim
+        - Evidence
+        - Invariant
+        - Delta
+      relations:
+        - supports
+        - contradicts
+        - measures
+        - satisfies
+      actions:
+        - validate
+        - measure
+        - compare
+        - assert
+      dsl_reference: "invariants/schema.yaml"
+
+# =============================================================================
+# INVESTIGATIVE PROCESSES (Domain-Specific Verification Methods)
+# =============================================================================
+
+investigative_processes:
+  description: |
+    Domain-specific methods for discovering and verifying properties.
+    These are the "how to verify" procedures bound to domains.
+
+  processes:
+    sameness_verification:
+      domain: website
+      applies_to: [replicate, clone, compare]
+      layers:
+        - name: elements
+          question: "What components exist?"
+          methods: [DOM_inspection, component_tree]
+          weight: 0.1
+        - name: appearance
+          question: "How does each element look?"
+          methods: [CSS_extraction, visual_diff]
+          weight: 0.3
+        - name: spatial
+          question: "How do elements relate spatially?"
+          methods: [bounding_box, layout_analysis]
+          weight: 0.2
+        - name: behavior
+          question: "How do elements respond?"
+          methods: [Playwright_interaction, event_trace]
+          weight: 0.4
+          critical: "REQUIRES runtime testing"
+      delta_formula: "0.1×Δ_elements + 0.3×Δ_appearance + 0.2×Δ_spatial + 0.4×Δ_behavior"
+      acceptance_threshold: 0.03
+
+    api_verification:
+      domain: api
+      applies_to: [implement, test, validate]
+      layers:
+        - name: contract
+          question: "Does schema match spec?"
+          methods: [schema_validation, type_check]
+        - name: behavior
+          question: "Do responses match expected?"
+          methods: [request_replay, assertion]
+        - name: edge_cases
+          question: "Do edge cases work?"
+          methods: [fuzz_testing, boundary_check]
+        - name: performance
+          question: "Does it meet SLAs?"
+          methods: [load_test, latency_measure]
+
+    deployment_verification:
+      domain: deployment
+      applies_to: [deploy, promote, rollback]
+      layers:
+        - name: config
+          question: "Are config values set?"
+          methods: [env_inspection, get_function_configuration]
+        - name: infra
+          question: "Is infrastructure ready?"
+          methods: [network_test, resource_check]
+        - name: service
+          question: "Does service respond?"
+          methods: [health_check, smoke_test]
+        - name: observability
+          question: "Are traces/logs appearing?"
+          methods: [CloudWatch_query, trace_check]
+
+# =============================================================================
+# COMPONENT EXAMPLES (How to Write Components in This Schema)
+# =============================================================================
+
+examples:
+  # --- Domain-Agnostic Command ---
+  explore_command:
+    id: "explore"
+    type: command
+    name: "Explore"
+    description: "Generate multiple options, explore solution space broadly"
+    domain: null  # Domain-agnostic
+    entities:
+      - type: Alternative
+        cardinality: "3+"
+      - type: ProCon
+        cardinality: "per alternative"
+    relations:
+      - type: generates
+        from: explore
+        to: Alternative
+      - type: evaluates
+        from: Alternative
+        to: ProCon
+    properties:
+      domain_agnostic:
+        - name: mode
+          domain: null
+          value: divergent
+        - name: local_check
+          domain: null
+          value: "At least 3 alternatives identified with pros/cons"
+      domain_specific: []
+    tuple_binding:
+      slot: Constraints
+      effect: expand
+
+  # --- Domain-Polymorphic Command ---
+  invariant_command:
+    id: "invariant"
+    type: command
+    name: "Invariant"
+    description: "Identify what must hold for goal - domain-polymorphic"
+    domain: null  # Accepts any domain, binds dynamically
+    entities:
+      - type: Claim
+        cardinality: "1+"
+      - type: Level
+        subtypes: [user, service, data, infra, config]
+    relations:
+      - type: verified_by
+        from: Claim
+        to: InvestigativeProcess
+    properties:
+      domain_agnostic:
+        - name: mode
+          domain: null
+          value: scan
+        - name: local_check
+          domain: null
+          value: "Invariants enumerated by level (0-4)"
+      domain_specific:
+        - name: investigative_process
+          domain: "$detected_domain"  # Bound at runtime
+          value: "$domain.investigative_process"
+    tuple_binding:
+      slot: Check
+      effect: verify
+    domain_detection:
+      patterns:
+        "replicate|clone|copy|same as": website.sameness_verification
+        "deploy|production|release": deployment.deployment_verification
+        "api|endpoint|response": api.api_verification
+
+  # --- Principle ---
+  defensive_programming:
+    id: "principle_1"
+    type: principle
+    name: "Defensive Programming"
+    description: "Fail fast and visibly when something is wrong"
+    domain: null  # Domain-agnostic
+    entities:
+      - type: Failure
+        subtypes: [silent, visible]
+      - type: Validation
+        subtypes: [startup, runtime]
+    relations:
+      - type: prevents
+        from: Validation
+        to: "Failure(silent)"
+      - type: enables
+        from: "Failure(visible)"
+        to: debugging
+    properties:
+      domain_agnostic:
+        - name: tier
+          domain: null
+          value: 0
+        - name: always_apply
+          domain: null
+          value: true
+      domain_specific: []
+    tuple_binding:
+      slot: Principles
+      effect: guide
+
+# =============================================================================
+# PROTOCOL OPERATIONS
+# =============================================================================
+
+protocol:
+  description: |
+    Operations for agent-to-agent communication using typed messages.
+
+  operations:
+    route_message:
+      description: "Route a message to the appropriate tuple slot"
+      input: Message
+      output: ThinkingTuple
+      logic: |
+        tuple[message.tuple_binding.slot].append(message)
+        apply_effect(message.tuple_binding.effect, message)
+
+    orchestrate:
+      description: "Run multiple agents in parallel, collect messages"
+      input:
+        - task: string
+        - agents: "Agent[]"
+      output: ThinkingTuple
+      logic: |
+        messages = parallel_execute(agents, task)
+        tuple = ThinkingTuple(task=task)
+        for message in messages:
+          route_message(message, tuple)
+        return tuple
+
+    check_invariant:
+      description: "Evaluate if invariant is satisfied"
+      input: ThinkingTuple
+      output:
+        status: "pass | fail | partial"
+        evidence: "Evidence[]"
+        delta: number
+      logic: |
+        invariant_messages = tuple.Invariant
+        check_messages = tuple.Check
+        return evaluate_satisfaction(invariant_messages, check_messages)
+
+# =============================================================================
+# GRADIENT PROTOCOL (Progress-Based Termination)
+# =============================================================================
+#
+# The Gradient Protocol enables adaptive termination based on "learning progress"
+# rather than fixed iteration counts. Claude evaluates whether meaningful progress
+# was made, and terminates when gradient becomes insignificant.
+#
+# Key insight: "Gradient insignificant" = Claude judges it has stopped learning
+#
+
+GradientProtocol:
+  version: "1.0"
+  description: |
+    Termination based on gradient significance rather than fixed iterations.
+    The gradient measures "change in knowledge/understanding" between iterations.
+    When gradient becomes insignificant, the thinking loop terminates.
+
+    This is analogous to gradient descent: stop when steps become small.
+    But here, Claude evaluates significance through natural language reasoning.
+
+  gradient_definition:
+    description: |
+      The gradient is a multi-component measure of progress.
+      It captures different dimensions of "learning" during thinking.
+
+    components:
+      knowledge_gradient:
+        description: "New entities, relations, or properties discovered"
+        measures:
+          - new_entities_count
+          - new_relations_count
+          - new_insights_count
+        significant_if: "At least 1 new insight that changes understanding"
+        weight: 0.3
+
+      invariant_gradient:
+        description: "Refinement of success criteria"
+        measures:
+          - invariant_precision_increased
+          - invariant_testability_improved
+          - acceptance_criteria_clarified
+        significant_if: "Invariant became more precise or testable"
+        weight: 0.2
+
+      evidence_gradient:
+        description: "Strengthening of evidence layers"
+        measures:
+          - evidence_layer_increased  # e.g., Layer 2 → Layer 3
+          - confidence_increased
+          - counter_evidence_addressed
+        significant_if: "Moved up at least 1 evidence layer"
+        weight: 0.3
+
+      confidence_gradient:
+        description: "Change in certainty about claims"
+        measures:
+          - uncertainty_reduced
+          - hypothesis_confirmed_or_refuted
+          - assumptions_validated
+        significant_if: "Confidence moved meaningfully (uncertain → confident or vice versa)"
+        weight: 0.2
+
+  evaluation:
+    description: |
+      How Claude evaluates whether gradient is significant.
+      This is a natural language evaluation, not numeric computation.
+
+    prompt_template: |
+      ## Gradient Evaluation
+
+      Compare the tuple state before and after this iteration:
+
+      **Before (Tuple_n-1)**:
+      - Constraints: {constraints_summary_before}
+      - Invariant: {invariant_summary_before}
+      - Evidence: {evidence_summary_before}
+      - Confidence: {confidence_before}
+
+      **After (Tuple_n)**:
+      - Constraints: {constraints_summary_after}
+      - Invariant: {invariant_summary_after}
+      - Evidence: {evidence_summary_after}
+      - Confidence: {confidence_after}
+
+      **Evaluate each gradient component**:
+
+      1. **Knowledge gradient**: Did we discover new knowledge?
+         - New entities, relations, or properties?
+         - New insights that change understanding?
+         → Significant: YES / NO
+
+      2. **Invariant gradient**: Did we refine the invariant?
+         - More precise success criteria?
+         - More testable conditions?
+         → Significant: YES / NO
+
+      3. **Evidence gradient**: Did we strengthen evidence?
+         - Higher evidence layer reached?
+         - More confidence in claims?
+         → Significant: YES / NO
+
+      4. **Confidence gradient**: Did our certainty change?
+         - Hypotheses confirmed or refuted?
+         - Assumptions validated or invalidated?
+         → Significant: YES / NO
+
+      **Overall gradient**:
+      - If ALL components are NO → INSIGNIFICANT → Recommend TERMINATE
+      - If ANY component is YES → SIGNIFICANT → Recommend CONTINUE
+
+      **Reasoning**: {explain_judgment}
+
+      **Recommendation**: CONTINUE / TERMINATE
+
+    output:
+      gradient_significant: boolean
+      components:
+        knowledge: "significant | insignificant"
+        invariant: "significant | insignificant"
+        evidence: "significant | insignificant"
+        confidence: "significant | insignificant"
+      reasoning: string
+      recommendation: "continue | terminate"
+
+  zero_gradient_detection:
+    description: |
+      Special case: detecting when we're stuck (zero gradient).
+      This is when multiple iterations produce no progress.
+
+    trigger: "2+ consecutive iterations with insignificant gradient"
+
+    response:
+      action: "Force termination with stuck status"
+      message: "Zero gradient detected - thinking loop is stuck"
+      recommendation: "Consider reframing the problem or seeking user input"
+
+  termination_conditions:
+    description: "When to exit the thinking loop"
+
+    conditions:
+      - name: gradient_insignificant
+        description: "Claude judges no meaningful progress was made"
+        priority: 2
+        evaluation: "Gradient evaluation returns insignificant"
+
+      - name: invariant_satisfied
+        description: "The goal has been achieved"
+        priority: 1
+        evaluation: "Check slot contains PASS with Layer 3+ evidence"
+
+      - name: zero_gradient
+        description: "Stuck - no progress for multiple iterations"
+        priority: 2
+        evaluation: "2+ consecutive insignificant gradients"
+
+      - name: max_iterations_safety
+        description: "Safety net to prevent infinite loops"
+        priority: 3
+        default: 20
+        evaluation: "iteration >= max_iterations"
+        note: "This is a fallback, not the primary condition"
+
+      - name: user_interrupt
+        description: "User signals to stop"
+        priority: 0  # Highest priority
+        evaluation: "User sends interrupt signal"
+
+# =============================================================================
+# LOOP PROTOCOL (The /run Engine)
+# =============================================================================
+
+LoopProtocol:
+  version: "1.0"
+  description: |
+    Defines how /run executes /step in a loop with gradient-based termination.
+    This is the "thinking engine" that runs until Claude stops learning.
+
+  execution_model:
+    initialize:
+      description: "Set up the thinking loop"
+      steps:
+        - Create RuntimeState with task and iteration=0
+        - Initialize ThinkingTuple with task
+        - Set max_iterations (default: 20)
+        - Record initial state for gradient comparison
+
+    loop:
+      description: "The main thinking loop"
+      steps:
+        - step_1_execute:
+            action: "Execute /step with current tuple state"
+            command: "/step"
+            input: "current ThinkingTuple"
+            output: "updated ThinkingTuple"
+
+        - step_2_evaluate_gradient:
+            action: "Check if meaningful progress was made"
+            uses: "GradientProtocol.evaluation"
+            input: "tuple_before, tuple_after"
+            output: "gradient_evaluation"
+
+        - step_3_check_termination:
+            action: "Decide whether to continue or terminate"
+            conditions:
+              - if: "invariant_satisfied"
+                then: "TERMINATE with success"
+              - if: "gradient_insignificant"
+                then: "TERMINATE with converged"
+              - if: "zero_gradient detected"
+                then: "TERMINATE with stuck"
+              - if: "max_iterations reached"
+                then: "TERMINATE with limit"
+              - if: "user_interrupt"
+                then: "TERMINATE with interrupted"
+              - else: "CONTINUE"
+
+        - step_4_update_state:
+            action: "Update RuntimeState for next iteration"
+            updates:
+              - iteration++
+              - record gradient_evaluation
+              - update tuple_before = tuple_after
+
+    terminate:
+      description: "Clean up and return results"
+      steps:
+        - Record final ThinkingTuple
+        - Record termination reason
+        - Save RuntimeState to .claude/state/runs/
+        - Return summary
+
+  runtime_state:
+    description: "Tracks loop progress across iterations"
+    fields:
+      task: string
+      iteration: number
+      max_iterations: number
+      status: "running | completed | converged | stuck | interrupted | limit_reached"
+
+      tuple_snapshots:
+        description: "Tuple state at each iteration for gradient comparison"
+        type: "ThinkingTuple[]"
+
+      gradient_history:
+        description: "Gradient evaluations across iterations"
+        type: array
+        items:
+          iteration: number
+          gradient_significant: boolean
+          components:
+            knowledge: string
+            invariant: string
+            evidence: string
+            confidence: string
+          reasoning: string
+
+      termination:
+        reason: string
+        iteration: number
+        final_tuple: ThinkingTuple
+
+  output:
+    description: "What /run returns when complete"
+    fields:
+      status: "success | converged | stuck | interrupted | limit_reached"
+      iterations: number
+      termination_reason: string
+      final_tuple: ThinkingTuple
+      gradient_history: "GradientEvaluation[]"
+      summary: string  # Human-readable summary
+
+# =============================================================================
+# SLOT COMPLETION CRITERIA
+# =============================================================================
+
+SlotCompletionCriteria:
+  description: |
+    Defines when each tuple slot is considered "filled enough".
+    Used by /step to decide which commands to run.
+
+  slots:
+    Constraints:
+      is_complete_when:
+        minimum_messages: 1
+        has_property: "knowledge_expanded"
+      commands_that_fill:
+        - explore
+        - observe
+        - context
+        - hypothesis
+        - consolidate
+        - trace
+
+    Invariant:
+      is_complete_when:
+        minimum_messages: 1
+        has_property: "success_criteria_defined"
+      commands_that_fill:
+        - understand
+        - decompose
+        - specify
+        - feature
+
+    Principles:
+      is_complete_when:
+        auto_loaded: true  # Tier-0 always loaded
+      commands_that_fill: []  # Auto-loaded
+
+    Strategy:
+      is_complete_when:
+        minimum_messages: 1
+        has_property: "execution_plan_defined"
+      commands_that_fill:
+        - what-if
+        - design
+
+    Check:
+      is_complete_when:
+        has_property: "invariant_evaluated"
+        evidence_layer: ">=3"
+      commands_that_fill:
+        - validate
+        - proof
+        - reflect
+        - invariant
+        - reconcile
+
+# =============================================================================
+# COMMAND SELECTION RULES
+# =============================================================================
+
+CommandSelectionRules:
+  description: |
+    How /step decides which commands to run based on tuple state.
+    This enables adaptive command selection within each iteration.
+
+  rules:
+    - name: "need_understanding"
+      if: "Invariant slot empty AND task is goal-oriented"
+      then: [understand, decompose]
+      rationale: "Must understand the goal before proceeding"
+
+    - name: "need_exploration"
+      if: "Constraints sparse AND task needs alternatives"
+      then: [explore]
+      rationale: "Need to discover options"
+
+    - name: "need_strategy"
+      if: "Invariant defined AND Strategy empty"
+      then: [what-if, design]
+      rationale: "Know the goal, need a plan"
+
+    - name: "need_validation"
+      if: "Strategy defined AND Check empty"
+      then: [validate]
+      rationale: "Have a plan, need to verify"
+
+    - name: "need_reconciliation"
+      if: "Check shows FAIL AND iteration < max"
+      then: [reconcile]
+      rationale: "Verification failed, try to fix"
+
+    - name: "done"
+      if: "Check shows PASS with Layer 3+ evidence"
+      then: []
+      rationale: "Goal achieved, terminate"
+
+# =============================================================================
+# MULTI-AGENT ORCHESTRATION
+# =============================================================================
+#
+# This section defines the types and protocols for multi-agent parallel execution.
+# Built on Claude Code's Task tool with max 10 concurrent agents.
+#
+
+Agent:
+  description: |
+    An **activation pattern** that produces behavior when instantiated.
+
+    Key Insight: Agents are not "brain regions" (locations) but "patterns"
+    (concepts that produce behavior). Just as "car" and "move" are both
+    concepts with specific neural firing patterns, agents like "coder" and
+    "researcher" are patterns for "how to code" and "how to research".
+
+    When you spawn an agent, you're instantiating a pattern, not invoking
+    a function. Patterns:
+    - Can represent entities, processes, or relations
+    - Compose naturally ("coder reviewing tests" = two patterns combined)
+    - Produce Messages routed to Thinking Tuple slots
+
+    Executor backends (see .claude/kernel/executors.yaml):
+    - claude_code: Native Task tool (default)
+    - claude_flow_swarm: Multi-agent swarm coordination
+    - claude_flow_worker: Background async workers
+    - claude_flow_hive: Byzantine fault-tolerant consensus
+
+    Key principle: Agent-Kernel is executor-agnostic. Any backend that
+    produces Messages with correct tuple_binding can participate.
+
+  fields:
+    id:
+      type: string
+      required: true
+      description: "Unique agent identifier (assigned by executor)"
+
+    name:
+      type: string
+      required: true
+      description: "Human-readable agent name"
+
+    subagent_type:
+      type: enum
+      values:
+        - Explore        # Fast codebase exploration
+        - Plan           # Implementation planning
+        - Bash           # Command execution
+        - general-purpose # Multi-step tasks
+        - coder          # Code implementation
+        - researcher     # Deep research
+        - tester         # Test creation
+        - reviewer       # Code review
+      required: true
+      description: "Agent type (maps to executor-specific templates)"
+
+    # =========================================================================
+    # EXECUTOR SPECIFICATION (New in v1.1 - Claude-Flow awareness)
+    # =========================================================================
+    executor:
+      type: ExecutorSpec
+      required: false
+      default: { backend: "claude_code" }
+      description: |
+        Specifies which execution backend runs this agent.
+        Enables Agent-Kernel to orchestrate Claude-Flow as an execution layer.
+
+    # =========================================================================
+
+    domain:
+      type: "Domain | null"
+      required: false
+      description: "Domain specialization (null = general)"
+
+    template:
+      type: "Template | null"
+      required: false
+      description: "Template this agent instantiates"
+
+    prompt:
+      type: string
+      required: true
+      description: "Task prompt for the agent"
+
+    output_schema:
+      type: "MessageType | null"
+      required: false
+      description: "Expected output type (for typed aggregation)"
+
+    tuple_binding:
+      type: TupleBinding
+      required: false
+      description: "Default tuple binding for agent's output"
+
+    status:
+      type: enum
+      values: [pending, running, completed, failed]
+      default: pending
+
+    result:
+      type: "Message | null"
+      required: false
+      description: "Agent's output message"
+
+# ---------------------------------------------------------------------------
+# CognitiveMode - How activation patterns coordinate (New in v1.2)
+# ---------------------------------------------------------------------------
+ExecutorSpec:
+  description: |
+    Specifies the cognitive mode for an Agent - how patterns coordinate.
+
+    Cognitive Architecture:
+      METACOGNITION (Agent-Kernel) → COGNITION (Claude-Flow) → ACTIVATION PATTERNS (Agents) → NEURAL SUBSTRATE (Claude)
+
+    The mode determines how patterns activate and coordinate:
+      - claude_code: Single pattern activation (focused attention)
+      - claude_flow_swarm: Multiple patterns active in parallel (divergent thinking)
+      - claude_flow_worker: Pattern incubation in background (subconscious processing)
+      - claude_flow_hive: Patterns competing for consensus (deliberation)
+
+    Key insight: Agents are patterns, not locations. This framing captures
+    that both entities ("car") and processes ("move") can be patterns, and
+    patterns compose naturally.
+
+    Reference: .claude/kernel/executors.yaml for cognitive mode definitions.
+
+  fields:
+    backend:
+      type: enum
+      values:
+        - claude_code       # Native Task tool (default)
+        - claude_flow_swarm # Multi-agent swarm
+        - claude_flow_worker # Background workers
+        - claude_flow_hive  # Consensus/voting
+        - external          # Future: external executors
+      required: true
+      default: claude_code
+      description: "Execution backend"
+
+    model:
+      type: enum
+      values: [haiku, sonnet, opus, inherit]
+      required: false
+      default: inherit
+      description: "Model preference (inherit = parent's model)"
+
+    pool:
+      type: string
+      required: false
+      description: "Agent pool ID for claude_flow_swarm"
+
+    swarm_id:
+      type: string
+      required: false
+      description: "Swarm ID if part of swarm coordination"
+
+    topology:
+      type: enum
+      values: [hierarchical, mesh, hierarchical-mesh, ring, star, adaptive]
+      required: false
+      description: "Swarm topology (for claude_flow_swarm)"
+
+    consensus:
+      type: enum
+      values: [raft, byzantine, gossip, crdt]
+      required: false
+      description: "Consensus algorithm (for claude_flow_hive)"
+
+    worker_type:
+      type: string
+      required: false
+      description: "Background worker type (for claude_flow_worker)"
+
+    async:
+      type: boolean
+      required: false
+      default: false
+      description: "Run asynchronously (fire and forget)"
+
+    mcp_tools:
+      type: "string[]"
+      required: false
+      description: "MCP tools this executor uses"
+
+# ---------------------------------------------------------------------------
+# ValidationResult - Typed output for verification agents
+# ---------------------------------------------------------------------------
+ValidationResult:
+  description: |
+    Typed output from scatter-gather verification agents.
+    Enables automated aggregation with weighted deltas.
+
+  extends: Message
+
+  fields:
+    layer:
+      type: string
+      required: true
+      description: "Which verification layer (elements, appearance, spatial, behavior)"
+
+    status:
+      type: enum
+      values: [pass, fail, partial, unknown]
+      required: true
+
+    delta:
+      type: number
+      range: [0.0, 1.0]
+      required: true
+      description: "0.0 = identical, 1.0 = completely different"
+
+    weight:
+      type: number
+      range: [0.0, 1.0]
+      default: 0.25
+      description: "Layer weight for aggregation"
+
+    evidence:
+      type: "Evidence[]"
+      required: false
+      description: "Supporting evidence for verdict"
+
+    findings:
+      type: "Finding[]"
+      required: false
+      description: "Specific observations"
+
+    confidence:
+      type: number
+      range: [0.0, 1.0]
+      default: 1.0
+      description: "Assessment confidence"
+
+    recommendations:
+      type: "string[]"
+      required: false
+      description: "Suggested fixes if status != pass"
+
+  tuple_binding:
+    slot: Check
+    effect: verify
+
+# ---------------------------------------------------------------------------
+# Finding - Individual observation from verification
+# ---------------------------------------------------------------------------
+Finding:
+  description: "A specific observation or issue found during verification"
+  fields:
+    severity:
+      type: enum
+      values: [error, warning, info]
+      required: true
+    message:
+      type: string
+      required: true
+    location:
+      type: string
+      required: false
+      description: "Where the issue was found"
+    expected:
+      type: any
+      required: false
+    actual:
+      type: any
+      required: false
+
+# ---------------------------------------------------------------------------
+# Evidence - Supporting evidence for claims
+# ---------------------------------------------------------------------------
+Evidence:
+  description: "Evidence supporting a verification claim"
+  fields:
+    layer:
+      type: number
+      range: [1, 4]
+      required: true
+      description: "Evidence layer (1=surface, 4=ground truth)"
+    type:
+      type: string
+      required: true
+      description: "Evidence type (screenshot, log, query result)"
+    content:
+      type: any
+      required: true
+    source:
+      type: string
+      required: false
+      description: "Where evidence was obtained"
+
+# ---------------------------------------------------------------------------
+# AgentPool - Collection of agents for parallel execution
+# ---------------------------------------------------------------------------
+AgentPool:
+  description: |
+    A pool of agents to be executed in parallel.
+    Maps to Claude Code's ability to launch multiple Task calls in one message.
+
+  fields:
+    id:
+      type: string
+      required: true
+
+    agents:
+      type: "Agent[]"
+      required: true
+      max_length: 10
+      description: "Agents to execute (max 10)"
+
+    execution_mode:
+      type: enum
+      values:
+        - parallel      # All agents start simultaneously
+        - scatter_gather # Parallel with structured aggregation
+        - pipeline      # Sequential stages, parallel within stage
+      default: parallel
+
+    aggregation:
+      type: AggregationStrategy
+      required: false
+      description: "How to combine agent outputs"
+
+    status:
+      type: enum
+      values: [pending, running, gathering, completed, failed]
+      default: pending
+
+    results:
+      type: "Message[]"
+      required: false
+      description: "Collected agent outputs"
+
+# ---------------------------------------------------------------------------
+# AggregationStrategy - How to combine parallel agent outputs
+# ---------------------------------------------------------------------------
+AggregationStrategy:
+  description: "Strategy for combining outputs from parallel agents"
+  fields:
+    mode:
+      type: enum
+      values:
+        - union         # Combine all results
+        - weighted_merge # Weighted average (for ValidationResults)
+        - vote          # Majority vote
+        - consensus     # All must agree
+        - first_wins    # Use first successful result
+      required: true
+
+    weights:
+      type: "Map<string, number>"
+      required: false
+      description: "For weighted_merge: layer name → weight"
+
+    conflict_resolution:
+      type: enum
+      values:
+        - child_wins
+        - higher_confidence_wins
+        - higher_evidence_layer_wins
+        - error
+      default: higher_confidence_wins
+
+    synthesis_prompt:
+      type: string
+      required: false
+      description: "For complex merges: prompt for synthesis agent"
+
+# ---------------------------------------------------------------------------
+# Orchestration Operations
+# ---------------------------------------------------------------------------
+orchestration_operations:
+  description: "Operations for multi-agent parallel execution"
+
+  spawn_agent:
+    description: "Create and launch a single agent"
+    input:
+      name: string
+      subagent_type: string
+      prompt: string
+      output_schema: "MessageType | null"
+    output: Agent
+
+  spawn_pool:
+    description: "Create and launch multiple agents in parallel"
+    input:
+      agents: "Agent[]"
+      execution_mode: string
+    output: AgentPool
+    constraint: "All agents must be in single message for parallelism"
+
+  gather_results:
+    description: "Collect and aggregate agent outputs"
+    input:
+      pool: AgentPool
+      strategy: AggregationStrategy
+    output: "Message | ValidationReport"
+
+  route_to_tuple:
+    description: "Route aggregated results to ThinkingTuple"
+    input:
+      results: "Message[]"
+      tuple: ThinkingTuple
+    output: ThinkingTuple
+    logic: |
+      for result in results:
+        slot = result.tuple_binding.slot
+        tuple[slot].append(result)
+        apply_effect(result.tuple_binding.effect, result)
+      return tuple
+
+# ---------------------------------------------------------------------------
+# Parallel Execution Patterns (Registered)
+# ---------------------------------------------------------------------------
+parallel_patterns:
+  description: "Named patterns for common parallel execution scenarios"
+
+  patterns:
+    parallel_explore:
+      description: "Launch multiple explore agents, merge findings"
+      agents_template:
+        count: "2-10"
+        subagent_type: Explore
+        output_schema: Message
+      aggregation:
+        mode: union
+        conflict_resolution: child_wins
+      documentation: ".claude/patterns/parallel-explore.md"
+
+    scatter_gather_verify:
+      description: "Parallel verification with typed aggregation"
+      agents_template:
+        subagent_type: "Explore | general-purpose"
+        output_schema: ValidationResult
+      aggregation:
+        mode: weighted_merge
+        weights: "From domain investigative_process"
+      documentation: ".claude/patterns/scatter-gather.md"
+
+    supervisor_worker:
+      description: "Hierarchical task delegation"
+      structure:
+        supervisor: "Plans and coordinates"
+        workers: "Execute specific subtasks"
+      documentation: ".claude/patterns/supervisor-worker.md"
+
+    pipeline_parallel:
+      description: "Sequential stages with parallel within"
+      structure:
+        stages: "Ordered sequence"
+        within_stage: "Parallel agents"
+      documentation: ".claude/patterns/pipeline-parallel.md"
+
+# =============================================================================
+# AGENT RUNTIME (Full Orchestration System)
+# =============================================================================
+#
+# The Agent Runtime is the complete system for multi-agent parallel execution.
+# It provides asyncio-style orchestration, message routing, error handling,
+# and integration with the Thinking Tuple Protocol.
+#
+
+AgentRuntime:
+  version: "1.0"
+  description: |
+    The complete orchestration system for multi-agent parallel execution.
+    Provides the operational layer that implements all parallel patterns.
+
+    Key responsibilities:
+    - Agent lifecycle management (spawn, monitor, terminate)
+    - Message routing between agents and tuple slots
+    - Error handling and recovery
+    - Timeout management
+    - Result aggregation
+
+  components:
+    # -------------------------------------------------------------------------
+    # Agent Lifecycle Manager
+    # -------------------------------------------------------------------------
+    lifecycle_manager:
+      description: "Manages agent creation, execution, and cleanup"
+
+      operations:
+        spawn:
+          description: "Create and start an agent"
+          input:
+            agent_spec: Agent
+          output:
+            agent_id: string
+            status: "running | failed"
+          implementation: |
+            # Maps to Claude Code Task tool
+            result = Task(
+              description=agent_spec.name,
+              prompt=agent_spec.prompt,
+              subagent_type=agent_spec.subagent_type
+            )
+            return result.agent_id
+
+        spawn_pool:
+          description: "Create and start multiple agents in parallel"
+          input:
+            agent_specs: "Agent[]"
+          output:
+            pool_id: string
+            agent_ids: "string[]"
+          constraint: "All Task calls must be in SINGLE message for parallelism"
+          implementation: |
+            # Launch all agents in one message
+            # This is the key to parallelism in Claude Code
+            results = parallel([
+              Task(spec) for spec in agent_specs
+            ])
+            return pool_id, [r.agent_id for r in results]
+
+        await_completion:
+          description: "Wait for agent(s) to complete"
+          input:
+            agent_ids: "string[]"
+            barrier: "all_complete | any_complete | majority | quorum"
+            timeout: number
+          output:
+            completed: "string[]"
+            pending: "string[]"
+            failed: "string[]"
+
+        terminate:
+          description: "Force stop an agent"
+          input:
+            agent_id: string
+          output:
+            status: "terminated | not_found"
+
+    # -------------------------------------------------------------------------
+    # Message Router
+    # -------------------------------------------------------------------------
+    message_router:
+      description: "Routes messages between agents and tuple slots"
+
+      operations:
+        route_to_tuple:
+          description: "Route agent output to appropriate tuple slot"
+          input:
+            message: Message
+            tuple: ThinkingTuple
+          logic: |
+            slot = message.tuple_binding.slot
+            effect = message.tuple_binding.effect
+
+            if effect == "expand":
+              tuple[slot].extend(message)
+            elif effect == "define":
+              tuple[slot] = message  # Replace
+            elif effect == "verify":
+              tuple[slot].append(message)
+
+            return tuple
+
+        broadcast:
+          description: "Send message to multiple agents"
+          input:
+            message: Message
+            agent_ids: "string[]"
+          output:
+            delivered: "string[]"
+            failed: "string[]"
+          note: "Not directly supported - use file-based communication"
+
+        aggregate:
+          description: "Combine multiple messages into one"
+          input:
+            messages: "Message[]"
+            strategy: AggregationStrategy
+          output:
+            aggregated: Message
+
+    # -------------------------------------------------------------------------
+    # Error Handler
+    # -------------------------------------------------------------------------
+    error_handler:
+      description: "Handles agent failures and recovery"
+
+      error_types:
+        timeout:
+          description: "Agent exceeded time limit"
+          recovery:
+            - retry_once
+            - use_partial_result
+            - fail_pipeline
+
+        agent_failure:
+          description: "Agent reported error"
+          recovery:
+            - retry_once
+            - reassign_to_different_agent
+            - escalate
+
+        context_overflow:
+          description: "Agent context exceeded 200k"
+          recovery:
+            - split_task
+            - summarize_and_continue
+            - fail_with_partial
+
+        invalid_output:
+          description: "Agent output doesn't match schema"
+          recovery:
+            - request_correction
+            - use_default
+            - fail
+
+      operations:
+        handle_error:
+          input:
+            agent_id: string
+            error_type: string
+            context: any
+          output:
+            action: "retry | reassign | fail | continue"
+            modified_spec: "Agent | null"
+
+    # -------------------------------------------------------------------------
+    # Timeout Manager
+    # -------------------------------------------------------------------------
+    timeout_manager:
+      description: "Manages timeouts for agents and stages"
+
+      defaults:
+        agent_timeout: 120000      # 2 minutes per agent
+        stage_timeout: 300000      # 5 minutes per stage
+        pipeline_timeout: 600000   # 10 minutes per pipeline
+
+      operations:
+        set_timeout:
+          input:
+            target_id: string
+            timeout_ms: number
+          output:
+            timer_id: string
+
+        check_timeout:
+          input:
+            timer_id: string
+          output:
+            expired: boolean
+            remaining_ms: number
+
+        cancel_timeout:
+          input:
+            timer_id: string
+
+    # -------------------------------------------------------------------------
+    # Result Aggregator
+    # -------------------------------------------------------------------------
+    result_aggregator:
+      description: "Aggregates results from multiple agents"
+
+      strategies:
+        union:
+          description: "Combine all results"
+          implementation: |
+            combined = []
+            for result in results:
+              combined.extend(result.findings)
+            return Message(findings=combined)
+
+        weighted_merge:
+          description: "Weighted average for ValidationResults"
+          implementation: |
+            total_delta = 0
+            for result in results:
+              total_delta += result.weight * result.delta
+            overall_delta = total_delta / sum(weights)
+            return ValidationResult(delta=overall_delta)
+
+        vote:
+          description: "Majority vote on status"
+          implementation: |
+            votes = Counter([r.status for r in results])
+            winner = votes.most_common(1)[0][0]
+            return Message(status=winner)
+
+        consensus:
+          description: "All must agree"
+          implementation: |
+            statuses = set([r.status for r in results])
+            if len(statuses) == 1:
+              return Message(status=statuses.pop())
+            else:
+              return Message(status="conflict", conflicts=results)
+
+# -----------------------------------------------------------------------------
+# Supervisor-Worker Protocol
+# -----------------------------------------------------------------------------
+SupervisorWorkerProtocol:
+  version: "1.0"
+  description: |
+    Protocol for executing supervisor-worker pattern.
+    Defines the contract between supervisor and workers.
+
+  phases:
+    planning:
+      description: "Supervisor analyzes and decomposes task"
+      inputs:
+        task: string
+        decomposition_mode: "auto | by_domain | by_file | by_phase | by_concern"
+      outputs:
+        work_units: "WorkUnit[]"
+        execution_plan: "Wave[]"
+      operations:
+        - analyze_task
+        - identify_domains
+        - create_work_units
+        - detect_dependencies
+        - group_into_waves
+
+    assignment:
+      description: "Supervisor assigns work units to workers"
+      inputs:
+        work_units: "WorkUnit[]"
+        available_workers: number
+      outputs:
+        assignments: "Map<WorkUnit, Agent>"
+      constraints:
+        - max_workers: 10
+        - balance_load: true
+
+    execution:
+      description: "Workers execute in waves"
+      for_each_wave:
+        - launch_workers_parallel
+        - await_barrier
+        - collect_results
+        - feed_to_next_wave
+
+    synthesis:
+      description: "Supervisor merges results"
+      inputs:
+        worker_results: "Message[]"
+      outputs:
+        final_result: ThinkingTuple
+      operations:
+        - validate_completeness
+        - detect_conflicts
+        - resolve_conflicts
+        - merge_into_tuple
+
+  work_unit_schema:
+    id: string
+    type: "exploration | verification | generation | transformation"
+    task: string
+    context: string
+    dependencies: "string[]"
+    output_schema: MessageType
+    assigned_agent: "Agent | null"
+    status: "pending | running | completed | failed"
+    result: "Message | null"
+
+  wave_schema:
+    id: number
+    units: "WorkUnit[]"
+    barrier: "all_complete | any_complete | majority"
+    status: "pending | running | completed"
+
+# -----------------------------------------------------------------------------
+# Pipeline Protocol
+# -----------------------------------------------------------------------------
+PipelineProtocol:
+  version: "1.0"
+  description: |
+    Protocol for executing pipeline-parallel pattern.
+    Defines sequential stages with parallel execution within.
+
+  execution_model:
+    for_each_stage:
+      1_prepare:
+        action: "Inject input from previous stage"
+        input: "Previous stage output or initial input"
+
+      2_spawn:
+        action: "Launch stage agents in parallel"
+        constraint: "All agents in single message"
+
+      3_barrier:
+        action: "Wait according to barrier type"
+        types:
+          all_complete: "Wait for all agents"
+          any_complete: "Use first result"
+          majority: "Wait for >50%"
+          quorum: "Wait for N agents"
+
+      4_aggregate:
+        action: "Combine agent outputs"
+        strategy: "From stage definition"
+
+      5_handoff:
+        action: "Pass output to next stage"
+        output: "Aggregated stage result"
+
+  stage_transitions:
+    - from: null
+      to: stage_0
+      action: "Initialize with task input"
+
+    - from: stage_n
+      to: stage_n+1
+      action: "Pass stage_n.output as stage_n+1.input"
+
+    - from: stage_final
+      to: null
+      action: "Return final result to caller"
+
+# -----------------------------------------------------------------------------
+# Runtime State Persistence
+# -----------------------------------------------------------------------------
+RuntimeStatePersistence:
+  description: "How runtime state is persisted across iterations"
+
+  locations:
+    runs: ".claude/state/runs/{run_id}/"
+    agents: ".claude/state/agents/{agent_id}/"
+    pipelines: ".claude/state/pipelines/{pipeline_id}/"
+
+  files:
+    tuple_snapshot: "tuple.yaml"
+    gradient_history: "gradients.yaml"
+    agent_results: "results/"
+    execution_log: "log.md"
+
+  retention:
+    successful_runs: "7 days"
+    failed_runs: "30 days"
+    agent_results: "until run cleanup"
+
+# -----------------------------------------------------------------------------
+# Integration Points
+# -----------------------------------------------------------------------------
+IntegrationPoints:
+  description: "How Agent Runtime integrates with existing systems"
+
+  thinking_tuple:
+    binding: "Agent outputs route to tuple slots"
+    aggregation: "Results merge according to tuple binding"
+
+  gradient_protocol:
+    evaluation: "Agent results feed gradient evaluation"
+    termination: "Pipeline stops when gradient insignificant"
+
+  linear_integration:
+    task_creation: "Pipelines can create Linear issues"
+    progress_updates: "Stage completions update Linear comments"
+    completion: "Final result updates Linear status"
+
+  commands:
+    orchestrate: "Uses SupervisorWorkerProtocol"
+    run: "Uses LoopProtocol + GradientProtocol"
+    analysis: "Uses PipelineProtocol"
+    validate: "Uses scatter-gather pattern"

@@ -1,0 +1,287 @@
+# DSLP Registry - Domain-Specific Languages for Specifications
+#
+# DSLP (Domain-Specific Language Protocol) is a META-LAYER above specifications.
+# It defines the vocabulary, grammar, and patterns for a domain.
+#
+# Architecture:
+#   Layer 2: DSLP (this registry) - defines WHAT language specs use
+#   Layer 1: Specifications - instances of DSLPs (desired state)
+#   Layer 0: Commands - operations on specs (read/write/verify)
+#
+# Every specification implicitly or explicitly uses a DSLP.
+# This registry makes the DSLP explicit.
+
+version: "1.0"
+last_updated: "2026-01-20"
+
+# =============================================================================
+# THE THREE-LAYER MODEL
+# =============================================================================
+#
+# DSLP Layer (Grammar/Vocabulary)
+#   │
+#   │ "spec uses DSL"
+#   ▼
+# Specification Layer (Instance of DSLP)
+#   │
+#   │ "command operates on spec"
+#   ▼
+# Command Layer (Operations)
+#
+# Example:
+#   DSLP: web_motion (defines triggers, easings, drivers, patterns)
+#   Spec: "Hero fades in on scroll with ease-out" (instance of web_motion)
+#   Command: /animate (implements the spec)
+
+# =============================================================================
+# DSLP DEFINITIONS
+# =============================================================================
+
+dsls:
+  # ---------------------------------------------------------------------------
+  # web_motion - Animation/Motion Design Language
+  # ---------------------------------------------------------------------------
+  web_motion:
+    description: "Language for describing web animations and motion design"
+    purpose: "Express animation intent in domain terms, generate code"
+
+    schema: domain_packs/web-motion/schema.yaml
+    patterns: domain_packs/web-motion/patterns.yaml
+    backends: domain_packs/web-motion/backends.yaml
+
+    semantic_elements:
+      - triggers: [scroll, hover, click, load, intersection]
+      - easings: [linear, ease-in, ease-out, ease-in-out, spring, bounce]
+      - drivers: [time, scroll_position, mouse_position, gesture]
+      - effects: [fade, slide, scale, rotate, blur, color_shift]
+      - compositions: [stagger, sequence, parallel, orchestrated]
+
+    spec_commands:
+      create: /animate
+      verify: /sameness
+      extract: /squeeze
+
+    output_artifacts:
+      - "*.tsx"           # React components
+      - "*.css"           # CSS animations
+      - "tailwind.config.js"  # Tailwind keyframes
+
+    status: active
+    maturity: production
+
+  # ---------------------------------------------------------------------------
+  # behavioral_invariant - System Behavior Verification Language
+  # ---------------------------------------------------------------------------
+  behavioral_invariant:
+    description: "Language for describing what must be true about system behavior"
+    purpose: "Express verification criteria across 5 levels"
+
+    schema: invariants/schema.yaml  # To be created
+
+    semantic_elements:
+      - levels:
+          level_0_user: "User can perform action X"
+          level_1_service: "Service returns expected response"
+          level_2_data: "Data is in correct state"
+          level_3_infra: "Infrastructure is configured correctly"
+          level_4_config: "Configuration values are set"
+      - evidence_layers:
+          layer_1_surface: "Status codes, exit codes"
+          layer_2_content: "Payloads, data structures"
+          layer_3_observability: "Logs, traces"
+          layer_4_ground_truth: "Actual state changes"
+      - quantifiers:
+          universal: "∀ (all instances must satisfy)"
+          existential: "∃ (at least one instance)"
+      - verification_modes:
+          static: "Code inspection"
+          runtime: "Execution test"
+
+    spec_commands:
+      create: /invariant
+      verify: /validate
+      fix: /reconcile
+
+    output_artifacts:
+      - ".claude/invariants/*.md"
+      - ".claude/specs/*/invariants.md"
+
+    status: active
+    maturity: production
+
+  # ---------------------------------------------------------------------------
+  # feature_contract - Feature Specification Language
+  # ---------------------------------------------------------------------------
+  feature_contract:
+    description: "Language for describing feature contracts and acceptance criteria"
+    purpose: "Express complete feature specifications with verification"
+
+    schema: specs/schema.yaml  # To be created
+
+    semantic_elements:
+      - components:
+          spec_yaml: "Core specification (name, goal, scope)"
+          invariants_md: "What must be true (uses behavioral_invariant DSL)"
+          constraints_md: "Boundaries and limits"
+          acceptance_md: "User-facing acceptance criteria"
+      - states:
+          proposed: "Initial specification"
+          approved: "Stakeholder approved"
+          implementing: "Development in progress"
+          verifying: "Testing against spec"
+          complete: "All acceptance criteria pass"
+      - traceability:
+          links_to: "ADRs, issues, PRs"
+          depends_on: "Other features"
+
+    spec_commands:
+      create: /feature
+      verify: /check-principles
+
+    output_artifacts:
+      - ".claude/specs/{feature}/spec.yaml"
+      - ".claude/specs/{feature}/invariants.md"
+      - ".claude/specs/{feature}/constraints.md"
+      - ".claude/specs/{feature}/acceptance.md"
+
+    status: active
+    maturity: production
+
+  # ---------------------------------------------------------------------------
+  # api_contract - API Design Language
+  # ---------------------------------------------------------------------------
+  api_contract:
+    description: "Language for describing API contracts"
+    purpose: "Express API specifications in a structured way"
+
+    schema: null  # Uses OpenAPI/Swagger conventions
+
+    semantic_elements:
+      - endpoints: "URL patterns with methods"
+      - request_schema: "Input data structures"
+      - response_schema: "Output data structures"
+      - error_codes: "Error responses and meanings"
+      - authentication: "Auth requirements"
+      - rate_limits: "Throttling rules"
+
+    spec_commands:
+      create: /specify
+      verify: /validate
+
+    output_artifacts:
+      - ".claude/specifications/api/*.md"
+      - "openapi.yaml"
+
+    status: draft
+    maturity: experimental
+
+  # ---------------------------------------------------------------------------
+  # aws_architecture - AWS Infrastructure Language
+  # ---------------------------------------------------------------------------
+  aws_architecture:
+    description: "Language for describing AWS infrastructure patterns"
+    purpose: "Express infrastructure intent, generate IaC"
+
+    schema: null  # To be created
+    patterns: null  # To be created
+
+    semantic_elements:
+      - compute: [lambda, ecs, ec2, fargate]
+      - storage: [s3, aurora, dynamodb, elasticache]
+      - networking: [vpc, subnets, nat, endpoints]
+      - integration: [api_gateway, sqs, sns, eventbridge]
+      - security: [iam, secrets_manager, kms]
+
+    spec_commands:
+      create: /architect
+      verify: /validate
+
+    output_artifacts:
+      - "terraform/*.tf"
+      - ".claude/architecture/*.md"
+
+    status: planned
+    maturity: concept
+
+  # ---------------------------------------------------------------------------
+  # code_complexity - Code Quality Analysis Language
+  # ---------------------------------------------------------------------------
+  code_complexity:
+    description: "Language for describing code quality metrics and refactoring needs"
+    purpose: "Express complexity analysis results and improvement plans"
+
+    schema: null  # Ad-hoc
+
+    semantic_elements:
+      - metrics:
+          cyclomatic_complexity: "Decision paths through code"
+          cognitive_complexity: "Mental effort to understand"
+          lines_of_code: "Size metric"
+          churn: "Change frequency (git commits)"
+      - priority_matrix:
+          p0_critical: "High churn + high complexity"
+          p1_monitor: "High churn + low complexity"
+          p2_schedule: "Low churn + high complexity"
+          p3_maintain: "Low churn + low complexity"
+
+    spec_commands:
+      create: /refacter
+      analyze: /restructure
+
+    output_artifacts:
+      - ".claude/refactoring/*.md"
+
+    status: active
+    maturity: production
+
+# =============================================================================
+# DSL RELATIONSHIPS
+# =============================================================================
+
+relationships:
+  # feature_contract specs can embed behavioral_invariant specs
+  feature_contract:
+    embeds:
+      - behavioral_invariant  # invariants.md uses behavioral_invariant DSL
+
+  # aws_architecture can generate code verified by behavioral_invariant
+  aws_architecture:
+    verified_by:
+      - behavioral_invariant
+
+  # web_motion artifacts are verified by behavioral_invariant (Layer 4)
+  web_motion:
+    verified_by:
+      - behavioral_invariant
+
+# =============================================================================
+# SPEC FILE CONVENTIONS
+# =============================================================================
+#
+# Spec files should declare their DSL at the top:
+#
+#   # .claude/specs/linkedin-automation/spec.yaml
+#   dslp: feature_contract
+#   version: "1.0"
+#   ...
+#
+#   # .claude/specs/hero-animation/spec.yaml
+#   dslp: web_motion
+#   version: "1.0"
+#   ...
+#
+# Commands that read specs should check the `dslp` field to know
+# which DSL grammar to apply.
+
+# =============================================================================
+# EXTENDING DSLP
+# =============================================================================
+#
+# To add a new DSLP:
+#
+# 1. Add entry to this registry (dsls section)
+# 2. Create schema file: .claude/domain_packs/{domain}/schema.yaml
+# 3. Optionally create patterns: .claude/domain_packs/{domain}/patterns.yaml
+# 4. Optionally create backends: .claude/domain_packs/{domain}/backends.yaml
+# 5. Create or designate spec_commands
+# 6. Document in CLAUDE.md Principle #28

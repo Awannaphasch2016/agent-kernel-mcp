@@ -1,0 +1,25 @@
+{
+  "name": "agent-kernel-mcp",
+  "version": "2.0.0",
+  "description": "Agent Kernel MCP - Metacognitive protocol server for AI-assisted development",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "agent-kernel-mcp": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js",
+    "dev": "tsc && node build/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "yaml": "^2.3.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": ["mcp", "agent-kernel", "metacognition", "thinking-tuple", "claude"],
+  "license": "MIT"
+}

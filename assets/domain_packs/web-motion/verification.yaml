@@ -1,0 +1,197 @@
+# Web Motion Domain Pack - Verification Schema
+# Defines how to verify web animations for sameness claims
+
+domain: web_motion
+version: 1.0.0
+description: Verification schema for web animation sameness testing
+
+# DSLP Layer 4 (Behavior) Verification Checks
+layer_4_verification:
+  description: "Behavioral verification for animation sameness claims"
+
+  checks:
+    - name: transition_count
+      description: "Count of CSS transitions must match within tolerance"
+      weight: 0.25
+      tolerance: 0.15  # 15% variance allowed
+      capture_method: animation_aware
+      verification: |
+        Count elements with non-trivial CSS transitions:
+        - transition-property !== 'none'
+        - transition-duration !== '0s'
+        Group by property (opacity, transform, background-color, etc.)
+
+    - name: hover_effects
+      description: "Hover effects produce same visual changes"
+      weight: 0.20
+      capture_method: standard
+      verification: |
+        For interactive elements (buttons, cards, links):
+        - Capture computed style before hover
+        - Trigger hover via page.hover()
+        - Capture computed style after hover
+        - Compare delta (transform, box-shadow, background-color)
+
+    - name: scroll_triggers
+      description: "Scroll animations trigger at similar thresholds"
+      weight: 0.25
+      tolerance: 0.10  # 10% scroll position variance
+      capture_method: animation_aware
+      verification: |
+        Track when elements transition from invisible to visible:
+        - Record scroll position when opacity crosses 0.5 threshold
+        - Record scroll position when transform completes
+        - Compare trigger points between original and clone
+
+    - name: animation_settlement
+      description: "All animated elements reached final state"
+      weight: 0.30
+      capture_method: animation_aware
+      verification: |
+        Before screenshot capture, verify:
+        - All elements have opacity >= 0.99 (not mid-fade)
+        - No running CSS animations (playState !== 'running')
+        - No running Web Animations API animations
+        - Transform values at final position (not mid-translateY)
+
+# Screenshot Capture Methods
+capture_methods:
+  standard:
+    description: "Basic screenshot without animation handling"
+    use_when: "Static content, no scroll-triggered animations"
+    protocol:
+      - goto(url, waitUntil='domcontentloaded')
+      - waitForTimeout(2000)
+      - screenshot(fullPage=true)
+
+  animation_aware:
+    description: "Full scroll-wait-capture protocol for scroll-triggered animations"
+    use_when: "Page uses IntersectionObserver, scroll-triggered animations"
+    protocol:
+      - goto(url, waitUntil='domcontentloaded')
+      - waitForTimeout(2000)
+      - scroll_through_page(step_size=0.7*viewport, wait_per_step=600ms)
+      - scrollTo(0, 0)
+      - waitForTimeout(500)
+      - verify_animations_settled()
+      - screenshot(fullPage=true)
+    reference: ".claude/skills/sameness-testing/screenshot-protocol.md"
+
+# Animation State Model
+animation_states:
+  description: "State machine for scroll-triggered animations"
+
+  states:
+    initial:
+      description: "Element's pre-animation state"
+      typical_properties:
+        opacity: 0
+        transform: "translateY(20-40px)"
+      entered_when: "Page loads"
+      exits_to: "animating"
+
+    animating:
+      description: "Animation in progress"
+      typical_properties:
+        opacity: "0 < x < 1"
+        transform: "transitioning"
+      entered_when: "IntersectionObserver triggers"
+      exits_to: "final"
+      duration: "200-1000ms typical"
+
+    final:
+      description: "Animation complete, element visible"
+      typical_properties:
+        opacity: 1
+        transform: "translateY(0) or none"
+      entered_when: "Animation completes"
+      required_for: "Accurate screenshot capture"
+
+  trigger_mechanisms:
+    intersection_observer:
+      description: "Most common for scroll-triggered animations"
+      threshold_typical: [0.1, 0.3, 0.5]
+      root_margin: "0px to -100px"
+      requires: "Element enters viewport to trigger"
+
+    scroll_event:
+      description: "Direct scroll position tracking"
+      triggering: "scroll event listener"
+      requires: "Page to be scrolled"
+
+    page_load:
+      description: "Triggered on DOMContentLoaded or load"
+      delay_typical: "300-800ms"
+      requires: "Page load completion only"
+
+# Quality Heuristics
+quality_heuristics:
+  file_size:
+    description: "Screenshot file size indicates content presence"
+    formula: "expected_min = page_height * 500 bytes"
+    warning_threshold: 0.5  # Warn if actual < 50% of expected
+    interpretation: |
+      Small file size suggests invisible content:
+      - Empty areas compress well
+      - Gradient-only regions are small
+      - Missing content = smaller file
+
+  section_visibility:
+    description: "Check each section has visible content"
+    warning_conditions:
+      - "section.opacity < 0.5"
+      - "section has children but none visible"
+      - "expected elements missing"
+
+  animation_running:
+    description: "No animations should be running at capture time"
+    check: "element.getAnimations().every(a => a.playState !== 'running')"
+
+# Common Failure Patterns
+failure_patterns:
+  - name: "Empty gradient areas"
+    symptom: "Large areas with only gradient/background visible"
+    cause: "IntersectionObserver never triggered - elements at opacity: 0"
+    fix: "Use animation_aware capture method"
+
+  - name: "Partial content"
+    symptom: "Hero and footer visible, middle sections empty"
+    cause: "Fast scroll didn't trigger middle section observers"
+    fix: "Scroll in small steps with wait at each step"
+
+  - name: "Blurry/faded content"
+    symptom: "Content visible but partially transparent"
+    cause: "Screenshot taken mid-animation"
+    fix: "Wait for animation_settlement check to pass"
+
+  - name: "Missing hover effects"
+    symptom: "Hover states not captured in comparison"
+    cause: "Hover triggered but screenshot taken before effect completes"
+    fix: "Add waitForTimeout after hover trigger"
+
+# Delta Calculation
+delta_formula:
+  description: "Layer 4 contribution to overall sameness delta"
+  formula: "Δ_L4 = Σ(check_weight × check_delta)"
+  weights:
+    transition_count: 0.25
+    hover_effects: 0.20
+    scroll_triggers: 0.25
+    animation_settlement: 0.30
+  overall_contribution: 0.40  # Layer 4 is 40% of total delta
+
+# Integration
+integration:
+  commands:
+    - "/sameness" - Uses animation_aware capture
+    - "/squeeze" - Behavior discovery
+    - "/compare-behavior" - Specific behavior comparison
+    - "/invariant" - References these checks
+
+  skills:
+    - "sameness-testing" - Implementation details
+    - "webapp-testing" - Playwright utilities
+
+  principles:
+    - "#25 - Universal Property Verification"
+    - "#2 - Progressive Evidence Strengthening"

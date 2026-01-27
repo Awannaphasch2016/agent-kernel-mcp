@@ -1,0 +1,859 @@
+# Command Ontology - Agent Kernel
+#
+# This file defines the unified command taxonomy for /step routing.
+# Commands are classified by type and mapped to Thinking Tuple slots.
+#
+# =============================================================================
+# UNIFIED ONTOLOGICAL FRAMEWORK
+# =============================================================================
+#
+# All components conform to the Unified Agent Kernel Protocol:
+#   Schema: .claude/kernel/schema.yaml
+#
+# Every component is a typed record with:
+#   - domain: Domain | null (domain-agnostic or domain-specific)
+#   - entities: Entity[] (what this component works with)
+#   - relations: Relation[] (how entities interact)
+#   - properties:
+#       domain_agnostic: Property[] (work in any domain)
+#       domain_specific: Property[] (require domain context)
+#   - tuple_binding: {slot, effect} (how it affects Thinking Tuple)
+#
+# This enables:
+#   - Agents to speak the same protocol
+#   - Orchestration via formal routing
+#   - Parallel execution via message passing
+#
+# =============================================================================
+# THREE-LAYER ARCHITECTURE
+# =============================================================================
+#
+#   Layer 2: DSLP (Domain Languages)
+#            Defines vocabulary/grammar for specifications
+#            See: .claude/domain_packs/registry.yaml
+#            │
+#            │ "spec uses DSL"
+#            ▼
+#   Layer 1: Specification (Instances of DSLPs)
+#            Declarative desired state written in a DSLP
+#            See: .claude/specs/, .claude/invariants/
+#            │
+#            │ "command operates on spec"
+#            ▼
+#   Layer 0: Commands (Operations on Specs)
+#            This file - primitives, composites, utilities
+#
+# =============================================================================
+# DOMAIN POLYMORPHISM
+# =============================================================================
+#
+# Commands can be:
+#   - domain_agnostic: Works with any domain (domain: null)
+#   - domain_polymorphic: Binds to detected domain at runtime
+#
+# Domain detection uses task patterns to select investigative processes:
+#   "replicate|clone|copy" → website.sameness_verification
+#   "deploy|release"       → deployment.deployment_verification
+#   "api|endpoint"         → api.api_verification
+#
+# =============================================================================
+#
+# Command Types:
+#   - primitive: Irreducible operation (cannot be decomposed)
+#   - composite: Chain of primitives (expands_to defines the chain)
+#   - alias: Different name for another command (delegates_to)
+#   - spec_command: Creates/reads/verifies specifications (uses a DSLP)
+#   - output_mode: Produces artifacts, not Tuple operations
+#   - utility: Operational helpers (not reasoning operations)
+#
+# =============================================================================
+# SEMANTIC INHERITANCE (Template Extension)
+# =============================================================================
+#
+# Commands can extend templates using the `extends` field with optional `voice`:
+#
+#   forensic-investigator:
+#     extends: investigator              # Template from registry.yaml
+#     voice:
+#       - slot: gather
+#         intent: "Parent's gathering with chain-of-custody for forensics"
+#         directive: wrap
+#
+# Template Registry: .claude/templates/registry.yaml
+# Schema Types: Template, Slot, Voice, MergeStrategy in kernel/schema.yaml
+#
+#
+# Tuple Slots:
+#   - Constraints: What we know (expands knowledge)
+#   - Invariant: What must be true (defines/refines success criteria)
+#   - Principles: What guides us (loads context-specific principles)
+#   - Strategy: What modes to execute (composes other modes)
+#   - Check: Did we satisfy invariant (verification)
+#
+# Mode Types:
+#   - divergent: Generate multiple options
+#   - convergent: Narrow to single option
+#   - causal: Follow cause-effect chains
+#   - verify: Test claims
+#   - clarify: Build understanding
+#   - decompose: Break into parts
+#   - define: Establish specifications
+#   - orchestrate: Full tuple control
+
+version: "3.2"
+last_updated: "2026-01-25"
+schema_reference: ".claude/kernel/schema.yaml"
+template_registry: ".claude/templates/registry.yaml"
+executor_registry: ".claude/kernel/executors.yaml"
+
+# =============================================================================
+# EXECUTION HINTS (Dynamic Agent Decision)
+# =============================================================================
+# Primitives declare execution_hints that /step reads to dynamically decide:
+#   - How many agents to spawn
+#   - Whether to use swarm coordination
+#   - What execution pattern to apply
+#
+# execution_hints:
+#   parallelizable: true | false          # Can benefit from parallel execution?
+#   benefits_from_multiple_perspectives: true | false  # Does diverse viewpoints help?
+#   requires_coherence: true | false      # Needs single-voice consistency?
+#   max_agents: number                    # Upper bound if parallelizable
+#   model_preference: haiku | sonnet | opus
+#
+# /step evaluates hints + context to select execution pattern:
+#   - focused: agents=1, no swarm (default)
+#   - parallel_explore: agents=N, mesh topology
+#   - parallel_verify: agents=N, hierarchical topology
+#   - consensus: agents>=3, byzantine consensus
+#
+# See: .claude/kernel/executors.yaml for execution patterns.
+# =============================================================================
+
+# =============================================================================
+# PRIMITIVE COMMANDS (Irreducible Operations)
+# =============================================================================
+
+primitives:
+  # --- Constraints-modifying (expand what we know) ---
+  explore:
+    slot: Constraints
+    mode: divergent
+    description: "Generate multiple options, explore solution space broadly"
+    local_check: "At least 3 alternatives identified with pros/cons"
+    execution_hints:
+      parallelizable: true
+      benefits_from_multiple_perspectives: true
+      requires_coherence: false
+      max_agents: 5
+      model_preference: haiku
+      rationale: "Exploration benefits from diverse parallel search; cheap agents work well"
+
+  observe:
+    slot: Constraints
+    mode: capture
+    description: "Record facts without interpretation (immutable observations)"
+    local_check: "Observation saved to .claude/observations/"
+
+  context:
+    slot: Constraints
+    mode: extract
+    description: "Extract relevant subset of knowledge for specific task"
+    local_check: "Context document generated with scope"
+
+  hypothesis:
+    slot: Constraints
+    mode: generative
+    description: "Generate testable explanations for observations"
+    local_check: "At least 2 hypotheses with test criteria"
+
+  consolidate:
+    slot: Constraints
+    mode: convergent
+    description: "Synthesize scattered knowledge into unified understanding"
+    local_check: "Consolidation saved to .claude/consolidate/"
+
+  trace:
+    slot: Constraints
+    mode: causal
+    description: "Follow causal chains backward (why) or forward (what will)"
+    local_check: "Causal chain documented with evidence"
+
+  # --- Invariant-modifying (define what must be true) ---
+  understand:
+    slot: Invariant
+    mode: clarify
+    description: "Build mental model, refine success criteria"
+    local_check: "Understanding criteria articulated"
+
+  decompose:
+    slot: Invariant
+    mode: decompose
+    description: "Break invariant into sub-invariants"
+    local_check: "Sub-components identified with dependencies"
+
+  specify:
+    slot: Invariant
+    mode: define
+    description: "Create formal specification"
+    local_check: "Spec saved to .claude/specs/"
+
+  feature:
+    slot: Invariant
+    mode: define
+    description: "Load/create feature spec (contract-based)"
+    local_check: "Feature spec exists with acceptance criteria"
+
+  # --- Strategy-composing (plan execution) ---
+  what-if:
+    slot: Strategy
+    mode: compare
+    description: "Compare alternatives, explore scenarios"
+    local_check: "Comparison matrix with recommendation"
+    execution_hints:
+      parallelizable: true
+      benefits_from_multiple_perspectives: true
+      requires_coherence: false
+      max_agents: 4
+      model_preference: sonnet
+      rationale: "Parallel comparison of alternatives benefits from scatter-gather"
+
+  design:
+    slot: Strategy
+    mode: plan
+    description: "Plan implementation with domain-specific checklist"
+    local_check: "Design document with checklist completion"
+    execution_hints:
+      parallelizable: false
+      requires_coherence: true
+      model_preference: sonnet
+      rationale: "Design requires coherent single perspective; parallel would fragment"
+
+  # --- Check-executing (verify invariant) ---
+  validate:
+    slot: Check
+    mode: verify_empirical
+    description: "Test claims with evidence (empirical verification)"
+    local_check: "Validation report with evidence layers"
+    execution_hints:
+      parallelizable: true
+      benefits_from_multiple_perspectives: true
+      requires_coherence: false
+      max_agents: 4
+      model_preference: haiku
+      rationale: "Parallel verification across evidence layers L1-L4"
+
+  proof:
+    slot: Check
+    mode: verify_deductive
+    description: "Construct formal deductive proof from axioms"
+    local_check: "Proof structure with QED"
+    execution_hints:
+      parallelizable: true
+      requires_coherence: false
+      requires_consensus: true
+      min_agents: 3
+      model_preference: opus
+      rationale: "Critical proofs need multi-agent consensus; consensus pattern triggers"
+
+  reflect:
+    slot: Check
+    mode: metacognitive
+    description: "Analyze reasoning patterns, detect stuck states"
+    local_check: "Reflection insights documented"
+
+  invariant:
+    slot: Check
+    mode: scan
+    domain: polymorphic  # Binds to detected domain at runtime
+    description: "Identify what must hold for goal (domain-polymorphic)"
+    local_check: "Invariants enumerated using domain-specific investigative process"
+    domain_detection:
+      patterns:
+        "replicate|clone|copy|same as|match": website.sameness_verification
+        "deploy|production|release|promote": deployment.deployment_verification
+        "api|endpoint|response|request": api.api_verification
+        "animate|motion|transition|effect": animation.animation_verification
+      fallback: generic_5_level  # Use generic levels if no domain detected
+    investigative_process: "$detected_domain.process"  # Bound at runtime
+
+  reconcile:
+    slot: Check
+    mode: fix
+    description: "Execute actions to satisfy violated invariant"
+    local_check: "Delta reduced toward 0"
+
+  # --- Full-cycle (orchestrates all slots) ---
+  step:
+    slot: all
+    mode: orchestrate
+    description: "Instantiate full Thinking Tuple, chain modes"
+    local_check: "Tuple completed: Constraints→Invariant→Strategy→Check"
+
+# =============================================================================
+# PROCESSES (Ordered Sequences of Primitives)
+# =============================================================================
+#
+# Processes are extended activities with ordered steps. Unlike atomic primitives,
+# processes have duration and unfold over time. The ordering between steps is
+# implied (step N must complete before step N+1).
+#
+# This replaces the previous "composites" terminology. "Process" is more precise
+# as it captures the temporal/sequential nature of these multi-step operations.
+#
+
+processes:
+  analysis:
+    execution_mode: pipeline  # Can run parallel agents within stages
+    steps:
+      - explore
+      - what-if
+      - validate
+      - consolidate
+    description: "Comprehensive analysis: explore→compare→test→synthesize"
+    invariants:
+      - "Each stage completes before next begins"
+      - "Knowledge accumulated across stages"
+    parallel_hint: |
+      In pipeline mode:
+      - explore: 3 parallel agents (code, docs, tests)
+      - what-if: 3 parallel agents (approach A, B, C)
+      - validate: 2 parallel agents (per approach)
+      - consolidate: 1 agent (synthesis)
+
+  bug-hunt:
+    execution_mode: pipeline  # Can run parallel agents within stages
+    steps:
+      - observe
+      - trace
+      - hypothesis
+      - validate
+    description: "Systematic debugging: observe→trace→hypothesize→test"
+    invariants:
+      - "Hypotheses grounded in observations"
+      - "Validation tests specific hypotheses"
+    parallel_hint: |
+      In pipeline mode:
+      - observe: 3 parallel agents (logs, traces, state)
+      - trace: 2 parallel agents (backward, forward)
+      - hypothesis: 3 parallel agents (one per hypothesis)
+      - validate: 3 parallel agents (test each hypothesis)
+
+  reproduce:
+    steps:
+      - observe
+      - decompose
+      - { internal: document }
+    description: "Create reproduction guide from observations"
+
+  abstract:
+    steps:
+      - observe
+      - consolidate
+      - { internal: extract_pattern }
+    description: "Extract reusable patterns from concrete instances"
+
+  evolve:
+    steps:
+      - observe
+      - validate
+      - { internal: propose_updates }
+      - { internal: sync_protocol }
+    description: "Detect drift, propose principle updates. Includes recursive self-evolution via protocol sync."
+    domain: null
+    tuple_binding:
+      slot: Check
+      effect: metacognitive
+    local_check: "Evolution report generated with drift analysis and proposed updates"
+    focus_areas:
+      - all           # Comprehensive review
+      - testing       # Test patterns
+      - deployment    # Deployment workflows
+      - error-handling # Error investigation
+      - architecture  # Design patterns
+      - docs          # Documentation drift
+      - cli           # CLI consistency
+      - protocol      # Agent Kernel Protocol compliance
+      - kernel        # Recursive self-evolution
+    recursive_property: |
+      /evolve must detect when IT ITSELF is out of sync with the system.
+      This is the closure property enabling meta-system integrity.
+      /evolve protocol includes /evolve itself in scope.
+      /evolve kernel checks coherence of the entire Agent Kernel system.
+
+  onboard:
+    steps:
+      - context
+      - consolidate
+      - { internal: generate_checklist }
+    description: "Generate onboarding checklist for new developers"
+
+# =============================================================================
+# ALIAS COMMANDS (Delegate to Another)
+# =============================================================================
+
+aliases:
+  compare:
+    delegates_to: what-if
+    mode_override: multi_way
+    description: "Multi-way comparison (alias for what-if)"
+
+  summary:
+    delegates_to: consolidate
+    mode_override: communication_focus
+    description: "Summarize (alias for consolidate)"
+
+  explain:
+    delegates_to: understand
+    mode_override: communication_focus
+    description: "Explain concepts (alias for understand)"
+
+  research:
+    delegates_to: explore
+    mode_override: thorough
+    description: "Deep research (thorough explore)"
+
+  impact:
+    delegates_to: trace
+    mode_override: forward
+    description: "Assess ripple effects (forward trace)"
+
+# =============================================================================
+# SPEC COMMANDS (Operations on Specifications using DSLPs)
+# =============================================================================
+#
+# These commands CREATE, READ, or VERIFY specifications.
+# Each spec_command uses a DSLP defined in .claude/domain_packs/registry.yaml
+#
+# The DSLP defines the vocabulary/grammar; the spec is an instance;
+# the command operates on the spec.
+
+spec_commands:
+  # --- Commands that CREATE specs ---
+  feature:
+    dslp: feature_contract
+    operation: create
+    slot: Invariant
+    description: "Create feature specification (feature_contract DSL)"
+    output: ".claude/specs/{feature}/"
+
+  invariant:
+    dslp: behavioral_invariant
+    operation: create
+    slot: Check
+    description: "Create behavioral invariants (behavioral_invariant DSL)"
+    output: ".claude/invariants/"
+
+  specify:
+    dslp: api_contract
+    operation: create
+    slot: Invariant
+    description: "Create API/design specification (api_contract DSL)"
+    output: ".claude/specifications/"
+
+  animate:
+    dslp: web_motion
+    operation: create
+    slot: Strategy
+    description: "Create/implement animation spec (web_motion DSL)"
+    output: "*.tsx, *.css"
+
+  architect:
+    dslp: aws_architecture
+    operation: create
+    slot: Strategy
+    description: "Create architecture spec (aws_architecture DSL)"
+    output: ".claude/architecture/, terraform/"
+
+  # --- Commands that VERIFY specs ---
+  sameness:
+    dslp: behavioral_invariant
+    operation: verify
+    slot: Check
+    description: "Verify UI sameness (4-layer behavioral_invariant)"
+
+  compare-behavior:
+    dslp: behavioral_invariant
+    operation: verify
+    slot: Check
+    description: "Compare behaviors between implementations"
+
+  check-principles:
+    dslp: behavioral_invariant
+    operation: verify
+    slot: Check
+    description: "Verify CLAUDE.md compliance"
+
+  # --- Commands that ANALYZE for specs ---
+  refacter:
+    dslp: code_complexity
+    operation: analyze
+    slot: Strategy
+    description: "Analyze complexity, generate refactoring spec"
+
+  restructure:
+    dslp: code_complexity
+    operation: analyze
+    slot: Invariant
+    description: "Analyze hotspots for restructuring spec"
+
+  squeeze:
+    dslp: behavioral_invariant
+    operation: extract
+    slot: Constraints
+    description: "Extract hidden behaviors into behavioral spec"
+
+  locate:
+    dslp: null  # No DSL, pure exploration
+    operation: search
+    slot: Constraints
+    description: "Find where functionality lives (no spec)"
+
+  deploy:
+    dslp: behavioral_invariant
+    operation: verify
+    slot: Check
+    description: "Execute deployment with invariant verification"
+
+# =============================================================================
+# OUTPUT MODES (Produce Artifacts, Not Tuple Operations)
+# =============================================================================
+
+output_modes:
+  journal:
+    produces: ".claude/journals/{category}/{date}-{slug}.md"
+    invoked_after: Check
+    description: "Document interpreted knowledge"
+
+  report:
+    produces: "stdout or specified file"
+    invoked_after: Check
+    description: "Generate session summary"
+
+  runbook:
+    produces: ".claude/runbooks/{date}-{slug}.md"
+    invoked_after: Check
+    description: "Generate operational runbook"
+
+  diff-explain:
+    produces: "stdout"
+    invoked_after: null
+    description: "Explain git diff changes"
+
+  problem-statement:
+    produces: "stdout"
+    invoked_after: null
+    description: "Recap decision point with context"
+
+# =============================================================================
+# UTILITY COMMANDS (Operational Helpers)
+# =============================================================================
+
+utilities:
+  # Git worktree management
+  wt-spin-off:
+    category: git_worktree
+    description: "Create branch and worktree for parallel work"
+
+  wt-list:
+    category: git_worktree
+    description: "List active worktrees with status"
+
+  wt-merge:
+    category: git_worktree
+    description: "Merge worktree branch to dev"
+
+  wt-remove:
+    category: git_worktree
+    description: "Remove worktree directory"
+
+  # Plan management
+  copy-plan:
+    category: plan_management
+    description: "Copy plan to /tmp/ for safe exploration"
+
+  restore-plan:
+    category: plan_management
+    description: "Restore plan from /tmp/ backup"
+
+  # Task management
+  task-manager:
+    category: task_management
+    description: "Persistent cross-session task tracking"
+
+  # Discovery
+  list-commands:
+    category: discovery
+    description: "List all available slash commands"
+
+  list-cli:
+    category: discovery
+    description: "List all dr CLI commands"
+
+  # Project
+  new-project:
+    category: project
+    description: "Initialize new project structure"
+
+# =============================================================================
+# /step ROUTING TABLE
+# =============================================================================
+# Maps user intent → default strategy (command sequence)
+
+step_routing:
+  goal_oriented:
+    triggers:
+      - "implement"
+      - "build"
+      - "create"
+      - "add"
+      - "fix"
+    default_strategy:
+      - step
+
+  exploration:
+    triggers:
+      - "what are options"
+      - "how could we"
+      - "explore"
+      - "alternatives"
+    default_strategy:
+      - explore
+
+  verification:
+    triggers:
+      - "is it correct"
+      - "verify"
+      - "check if"
+      - "does it"
+    default_strategy:
+      - validate
+
+  deductive:
+    triggers:
+      - "prove"
+      - "must be true"
+      - "given constraints"
+    default_strategy:
+      - proof
+
+  explanation:
+    triggers:
+      - "how does"
+      - "what is"
+      - "explain"
+      - "why does"
+    default_strategy:
+      - understand
+
+  comparison:
+    triggers:
+      - "vs"
+      - "compare"
+      - "which is better"
+      - "trade-offs"
+    default_strategy:
+      - what-if
+
+  causal:
+    triggers:
+      - "why did"
+      - "root cause"
+      - "what caused"
+      - "what will happen"
+    default_strategy:
+      - trace
+
+  comprehensive:
+    triggers:
+      - "analyze thoroughly"
+      - "full analysis"
+      - "understand completely"
+    default_strategy:
+      - analysis
+
+# =============================================================================
+# META COMMANDS (Control Execution of Other Commands)
+# =============================================================================
+#
+# Meta commands orchestrate other commands. They don't fill tuple slots directly;
+# they control HOW commands execute (looping, parallelism, etc.)
+
+meta_commands:
+  run:
+    wraps: step
+    mode: loop_with_gradient
+    description: "Execute /step in loop until gradient insignificant"
+
+    execution:
+      protocol: LoopProtocol       # Defined in kernel/schema.yaml
+      termination: GradientProtocol # Defined in kernel/schema.yaml
+
+    parameters:
+      max_iterations:
+        type: number
+        default: 20
+        description: "Safety limit for iterations"
+      verbose:
+        type: boolean
+        default: false
+        description: "Show gradient evaluation each iteration"
+      save_state:
+        type: boolean
+        default: true
+        description: "Save RuntimeState to .claude/state/runs/"
+
+    tuple_binding:
+      slot: all
+      effect: orchestrate_loop
+
+    gradient_components:
+      - knowledge      # New entities, relations, insights
+      - invariant      # Refinement of success criteria
+      - evidence       # Strengthening of evidence layers
+      - confidence     # Change in certainty
+
+    termination_conditions:
+      - user_interrupt      # Priority 0 (highest)
+      - invariant_satisfied # Priority 1
+      - gradient_insignificant # Priority 2
+      - zero_gradient       # Priority 2 (2+ consecutive insignificant)
+      - max_iterations      # Priority 3 (safety net)
+
+  orchestrate:
+    wraps: step
+    mode: supervisor_worker
+    description: "Execute task using supervisor-worker pattern with parallel agents"
+
+    execution:
+      protocol: SupervisorWorkerProtocol
+      pattern: ".claude/patterns/supervisor-worker.md"
+
+    parameters:
+      task:
+        type: string
+        required: true
+        description: "Task to execute"
+      decomposition:
+        type: enum
+        values: [auto, by_domain, by_file, by_phase, by_concern]
+        default: auto
+        description: "How to break task into work units"
+      max_workers:
+        type: number
+        default: 5
+        max: 10
+        description: "Maximum parallel workers"
+      failure_mode:
+        type: enum
+        values: [retry, reassign, fail_fast]
+        default: retry
+        description: "How to handle worker failures"
+
+    tuple_binding:
+      slot: all
+      effect: orchestrate_parallel
+
+# =============================================================================
+# INTERNAL MODES (Micro-operations, not user-invocable)
+# =============================================================================
+
+internal_modes:
+  - summarize
+  - rewrite_simple
+  - extract_criteria
+  - compare_two
+  - extract_pattern
+  - document
+  - generate_checklist
+  - propose_updates
+  - evaluate_gradient  # Gradient evaluation for /run
+  - sync_protocol      # Protocol compliance sync for /evolve protocol
+  - check_coherence    # System coherence check for /evolve kernel
+
+# =============================================================================
+# EXECUTION MODES (Session-Level Execution Context)
+# =============================================================================
+#
+# Execution modes define HOW prompts are processed at the session level.
+# Unlike commands that perform operations, modes configure the execution context.
+#
+# Two mutually exclusive modes:
+#   - chat: Default. Prompts processed directly by Claude.
+#   - kernel: Agent Kernel. Prompts routed through /run → /step → primitives.
+#
+# Mode provides benchmark value: chat = baseline, kernel = enhanced.
+
+execution_modes:
+  chat:
+    description: "Normal conversational Claude (default execution context)"
+    is_default: true
+    prompt_routing: direct
+    state_management: conversation_only
+    termination: user_controlled
+    linear_integration: false
+    tuple_machinery: false
+
+    behavior:
+      - "Prompts processed directly by Claude"
+      - "No Thinking Tuple instantiation"
+      - "No gradient tracking"
+      - "No Linear integration"
+      - "Commands available when explicitly invoked"
+
+    best_for:
+      - "Quick questions and answers"
+      - "Simple edits and fixes"
+      - "Exploration without commitment"
+      - "Baseline benchmarking"
+
+  kernel:
+    description: "Agent Kernel mode - full Thinking Tuple protocol for all prompts"
+    is_default: false
+    prompt_routing: through_run    # All prompts → /run → /step → primitives
+    state_management: runtime_state  # Full RuntimeState + Tuple snapshots
+    termination: gradient_based    # Continue until gradient → 0
+    linear_integration: true       # Work visible to team
+    tuple_machinery: true          # Full protocol active
+
+    behavior:
+      - "All prompts routed through /run pipeline"
+      - "Thinking Tuple instantiated for every task"
+      - "Gradient-based termination"
+      - "Linear integration for team visibility"
+      - "User checkpoints on critical ambiguity"
+      - "RuntimeState persistence"
+
+    best_for:
+      - "Complex multi-step implementations"
+      - "Spec-driven development"
+      - "Team-visible work"
+      - "Long-running sessions needing recovery"
+
+    protocols:
+      - ThinkingTupleProtocol    # Principle #26
+      - GradientProtocol         # From kernel/schema.yaml
+      - LoopProtocol             # From kernel/schema.yaml
+
+# Mode switching commands
+mode_commands:
+  kernel:
+    type: mode_switch
+    target_mode: kernel
+    accepts_task: true           # /kernel "task" starts immediate execution
+    description: "Enter Agent Kernel mode"
+
+  chat:
+    type: mode_switch
+    target_mode: chat
+    preserves_state: true        # Saves RuntimeState before switching
+    description: "Return to chat mode"
+
+  mode:
+    type: mode_query_or_switch
+    description: "Check current mode or switch modes"
+    parameters:
+      target_mode:
+        type: enum
+        values: [chat, kernel]
+        required: false          # If omitted, shows current mode

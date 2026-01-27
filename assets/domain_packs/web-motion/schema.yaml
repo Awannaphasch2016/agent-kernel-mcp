@@ -1,0 +1,101 @@
+# Web Motion Domain Pack - Semantic Schema (L1)
+# Defines the structure for representing web animation semantics
+
+domain: web_motion
+version: 1.0.0
+description: Semantic schema for web-based motion and animation
+
+# L1: Semantic Specification Structure
+semantic_spec:
+  scene_type:
+    description: "High-level animation category"
+    values:
+      - element_enter      # Element appearing in viewport
+      - element_exit       # Element leaving viewport
+      - scroll_linked      # Animation driven by scroll position
+      - user_interaction   # Hover, click, focus animations
+      - timed_sequence     # Time-based choreographed animations
+      - state_transition   # Component state change animations
+
+  driver:
+    description: "What controls the animation timeline"
+    types:
+      - type: time
+        properties: [duration_ms, delay_ms]
+      - type: scroll
+        properties: [scroll_range_px, direction]
+      - type: interaction
+        properties: [event_type, target_selector]
+      - type: intersection
+        properties: [threshold, root_margin]
+
+  easing:
+    description: "Timing function for animation progression"
+    values:
+      - linear
+      - easeIn, easeOut, easeInOut
+      - easeInQuad, easeOutQuad, easeInOutQuad
+      - easeInCubic, easeOutCubic, easeInOutCubic
+      - easeInQuart, easeOutQuart, easeInOutQuart
+      - spring               # Physics-based easing
+      - custom: "cubic-bezier(x1,y1,x2,y2)"
+
+  trigger:
+    description: "When animation should start"
+    types:
+      - on_page_load:
+          delay_ms: number
+      - on_enter_viewport:
+          selector: string
+          threshold: number    # 0.0 - 1.0 (% of element visible)
+          root_margin: string  # CSS margin format
+      - on_scroll_position:
+          scroll_y_px: number
+      - on_user_event:
+          event: string        # click, hover, focus, etc.
+          selector: string
+
+  target_elements:
+    description: "Elements to animate and their property changes"
+    structure:
+      - selector: string
+        tracks:             # Properties that change over time
+          x: {from: number, to: number, unit: "px|%|vw"}
+          y: {from: number, to: number, unit: "px|%|vh"}
+          scale: {from: number, to: number}
+          rotate: {from: number, to: number, unit: "deg|rad"}
+          opacity: {from: number, to: number}  # 0.0 - 1.0
+          blur: {from: number, to: number, unit: "px"}
+          custom: {property: string, from: any, to: any}
+
+  constraints:
+    description: "Behavioral constraints and preferences"
+    options:
+      play_once: boolean           # Animation plays only once
+      loop: boolean                # Animation repeats indefinitely
+      reverse_on_exit: boolean     # Reverse when leaving viewport
+      prefer_css: boolean          # Prefer CSS over JS when possible
+      respect_reduced_motion: boolean  # Honor user's motion preferences
+      stagger_children:
+        enabled: boolean
+        delay_ms: number           # Delay between child animations
+
+vocabulary:
+  # Common animation property names
+  properties:
+    - transform: [x, y, scale, rotate, skew]
+    - appearance: [opacity, blur, brightness, contrast]
+    - layout: [width, height, padding, margin]
+    - color: [background_color, text_color, border_color]
+    - custom: [any CSS property]
+
+  # Animation quality descriptors
+  quality:
+    - smooth: "60fps, no janky"
+    - performant: "GPU-accelerated properties only (transform, opacity)"
+    - accessible: "Respects prefers-reduced-motion"
+
+notes:
+  - "This schema is implementation-neutral - no CSS/JS/framework specifics"
+  - "Semantic specs map to multiple implementation backends"
+  - "Framework-specific details belong in L3 (Implementation Plan)"

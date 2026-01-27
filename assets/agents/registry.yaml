@@ -1,0 +1,697 @@
+# Agent Registry - Agent Kernel Native Agents
+# Version: 1.1
+# Generated: 2026-01-26
+# Total agents: 39
+
+version: "1.1"
+schema_version: "1.0"
+
+agents:
+  # =============================================================================
+  # CORE AGENTS (Primary development roles)
+  # =============================================================================
+
+  coder:
+    file: core/coder.md
+    type: developer
+    description: Implementation specialist for writing clean, efficient code
+    color: "#FF6B35"
+    capabilities:
+      - code_generation
+      - refactoring
+      - optimization
+      - api_design
+      - error_handling
+    priority: high
+    principles:
+      - defensive-programming
+      - error-handling-duality
+      - type-system-integration
+      - logging-discipline
+    skills:
+      - code-review
+    tuple_binding:
+      slot: Strategy
+      effect: execute
+    model_preference: sonnet
+
+  researcher:
+    file: core/researcher.md
+    type: analyst
+    description: Deep research and information gathering specialist
+    color: "#9B59B6"
+    capabilities:
+      - code_analysis
+      - pattern_recognition
+      - documentation_research
+      - dependency_tracking
+      - knowledge_synthesis
+    priority: high
+    principles:
+      - universal-property-verification
+      - progressive-evidence
+      - execution-boundary
+      - feedback-loop-awareness
+    skills:
+      - research
+      - error-investigation
+    tuple_binding:
+      slot: Constraints
+      effect: expand
+    model_preference: haiku
+
+  reviewer:
+    file: core/reviewer.md
+    type: analyst
+    description: Code review and quality assurance specialist
+    color: "#27AE60"
+    capabilities:
+      - code_review
+      - quality_assurance
+      - best_practices_verification
+    priority: high
+    principles:
+      - defensive-programming
+      - progressive-evidence
+      - testing-anti-patterns
+      - type-system-integration
+    skills:
+      - code-review
+    tuple_binding:
+      slot: Check
+      effect: verify
+    model_preference: sonnet
+
+  tester:
+    file: core/tester.md
+    type: developer
+    description: Comprehensive testing and quality assurance specialist
+    color: "#3498DB"
+    capabilities:
+      - test_writing
+      - edge_case_identification
+      - integration_testing
+      - coverage_analysis
+    priority: high
+    principles:
+      - testing-anti-patterns
+      - cross-boundary-testing
+      - loud-mock-pattern
+      - progressive-evidence
+    skills:
+      - testing-workflow
+    tuple_binding:
+      slot: Check
+      effect: verify
+    model_preference: sonnet
+
+  planner:
+    file: core/planner.md
+    type: coordinator
+    description: Strategic planning and task orchestration agent
+    color: "#F39C12"
+    capabilities:
+      - task_decomposition
+      - strategy_planning
+      - prioritization
+      - coordination
+    priority: high
+    principles:
+      - thinking-tuple
+      - commands-as-modes
+      - execution-modes
+      - cognitive-architecture
+    tuple_binding:
+      slot: Strategy
+      effect: plan
+    model_preference: opus
+
+  # =============================================================================
+  # ROOT-LEVEL AGENTS (General purpose)
+  # =============================================================================
+
+  explorer:
+    file: explorer.md
+    type: analyst
+    description: Fast codebase exploration specialist
+    color: "#2ECC71"
+    capabilities:
+      - file_discovery
+      - pattern_search
+      - codebase_navigation
+    priority: normal
+    principles:
+      - progressive-evidence
+      - execution-boundary
+    tuple_binding:
+      slot: Constraints
+      effect: expand
+    model_preference: haiku
+
+  verifier:
+    file: verifier.md
+    type: analyst
+    description: Verification agent for scatter-gather validation
+    color: "#E74C3C"
+    capabilities:
+      - validation
+      - verification
+      - consensus_checking
+    priority: normal
+    principles:
+      - progressive-evidence
+      - universal-property-verification
+    tuple_binding:
+      slot: Check
+      effect: verify
+    model_preference: sonnet
+
+  worker:
+    file: worker.md
+    type: executor
+    description: General worker agent for supervisor-worker orchestration
+    color: "#95A5A6"
+    capabilities:
+      - task_execution
+      - parallel_processing
+    priority: normal
+    principles:
+      - defensive-programming
+    tuple_binding:
+      slot: Strategy
+      effect: execute
+    model_preference: haiku
+
+  pipeline-stage:
+    file: pipeline-stage.md
+    type: executor
+    description: Stage executor for pipeline parallelism
+    color: "#1ABC9C"
+    capabilities:
+      - stage_execution
+      - pipeline_coordination
+    priority: normal
+    principles:
+      - defensive-programming
+      - logging-discipline
+    tuple_binding:
+      slot: Strategy
+      effect: execute
+    model_preference: haiku
+
+  # =============================================================================
+  # SPARC METHODOLOGY AGENTS
+  # =============================================================================
+
+  specification:
+    file: sparc/specification.md
+    type: analyst
+    description: SPARC Specification phase specialist for requirements analysis
+    color: "#3B82F6"
+    capabilities:
+      - requirements_analysis
+      - spec_writing
+      - constraint_identification
+    priority: normal
+    principles:
+      - thinking-tuple
+      - universal-property-verification
+    tuple_binding:
+      slot: Invariant
+      effect: define
+    model_preference: sonnet
+
+  pseudocode:
+    file: sparc/pseudocode.md
+    type: developer
+    description: SPARC Pseudocode phase specialist for algorithm design
+    color: "#8B5CF6"
+    capabilities:
+      - algorithm_design
+      - logic_planning
+      - pseudocode_writing
+    priority: normal
+    principles:
+      - thinking-tuple
+    tuple_binding:
+      slot: Strategy
+      effect: plan
+    model_preference: sonnet
+
+  architecture:
+    file: sparc/architecture.md
+    type: architect
+    description: SPARC Architecture phase specialist for system design
+    color: "#EC4899"
+    capabilities:
+      - system_design
+      - component_planning
+      - architecture_decisions
+    priority: normal
+    principles:
+      - unified-ontology
+      - semantic-inheritance
+      - dslp-framework
+    tuple_binding:
+      slot: Invariant
+      effect: define
+    model_preference: opus
+
+  refinement:
+    file: sparc/refinement.md
+    type: developer
+    description: SPARC Refinement phase specialist for iterative improvement
+    color: "#F59E0B"
+    capabilities:
+      - code_refinement
+      - optimization
+      - iterative_improvement
+    priority: normal
+    principles:
+      - progressive-evidence
+      - testing-anti-patterns
+    tuple_binding:
+      slot: Check
+      effect: verify
+    model_preference: sonnet
+
+  # =============================================================================
+  # GOAL-ORIENTED AGENTS
+  # =============================================================================
+
+  goal-planner:
+    file: goal/goal-planner.md
+    type: planner
+    description: Goal-Oriented Action Planning (GOAP) specialist for intelligent plan discovery
+    color: "#F59E0B"
+    capabilities:
+      - goap_planning
+      - action_discovery
+      - adaptive_replanning
+    priority: high
+    principles:
+      - thinking-tuple
+      - commands-as-modes
+    tuple_binding:
+      slot: Strategy
+      effect: plan
+    model_preference: opus
+
+  code-goal-planner:
+    file: goal/code-goal-planner.md
+    type: planner
+    description: Code-centric GOAP specialist for software development objectives
+    color: "#10B981"
+    capabilities:
+      - code_planning
+      - milestone_decomposition
+      - success_criteria
+    priority: high
+    principles:
+      - thinking-tuple
+      - defensive-programming
+    tuple_binding:
+      slot: Strategy
+      effect: plan
+    model_preference: opus
+
+  # =============================================================================
+  # ANALYSIS AGENTS
+  # =============================================================================
+
+  code-analyzer:
+    file: analysis/code-analyzer.md
+    type: analyst
+    description: Advanced code quality analysis agent for comprehensive reviews
+    color: "#3B82F6"
+    capabilities:
+      - code_quality_analysis
+      - pattern_detection
+      - improvement_suggestions
+    priority: normal
+    principles:
+      - defensive-programming
+      - progressive-evidence
+    skills:
+      - code-review
+    tuple_binding:
+      slot: Check
+      effect: verify
+    model_preference: sonnet
+
+  # =============================================================================
+  # DEVELOPMENT AGENTS
+  # =============================================================================
+
+  backend-dev:
+    file: development/dev-backend-api.md
+    type: developer
+    description: Specialized agent for backend API development
+    color: "#10B981"
+    capabilities:
+      - api_development
+      - backend_architecture
+      - database_integration
+    priority: normal
+    principles:
+      - defensive-programming
+      - error-handling-duality
+    tuple_binding:
+      slot: Strategy
+      effect: execute
+    model_preference: sonnet
+
+  # =============================================================================
+  # ARCHITECTURE AGENTS
+  # =============================================================================
+
+  system-architect:
+    file: architecture/system-design/arch-system-design.md
+    type: architect
+    description: Expert agent for system architecture design and high-level technical decisions
+    color: "#8B5CF6"
+    capabilities:
+      - system_design
+      - architecture_patterns
+      - technical_decisions
+    priority: high
+    principles:
+      - unified-ontology
+      - semantic-inheritance
+      - dslp-framework
+      - configuration-variation
+    tuple_binding:
+      slot: Invariant
+      effect: define
+    model_preference: opus
+
+  # =============================================================================
+  # DOCUMENTATION AGENTS
+  # =============================================================================
+
+  api-docs:
+    file: documentation/api-docs/docs-api-openapi.md
+    type: developer
+    description: Expert agent for creating and maintaining OpenAPI/Swagger documentation
+    color: "#22C55E"
+    capabilities:
+      - openapi_generation
+      - api_documentation
+      - schema_design
+    priority: normal
+    principles:
+      - logging-discipline
+    tuple_binding:
+      slot: Constraints
+      effect: expand
+    model_preference: haiku
+
+  # =============================================================================
+  # DEVOPS AGENTS
+  # =============================================================================
+
+  cicd-engineer:
+    file: devops/ci-cd/ops-cicd-github.md
+    type: developer
+    description: Specialized agent for GitHub Actions CI/CD pipeline creation and optimization
+    color: "#F97316"
+    capabilities:
+      - github_actions
+      - ci_cd_pipelines
+      - deployment_automation
+    priority: normal
+    principles:
+      - defensive-programming
+      - logging-discipline
+    tuple_binding:
+      slot: Strategy
+      effect: execute
+    model_preference: sonnet
+
+  # =============================================================================
+  # SPECIALIZED AGENTS
+  # =============================================================================
+
+  mobile-dev:
+    file: specialized/mobile/spec-mobile-react-native.md
+    type: developer
+    description: Expert agent for React Native mobile application development
+    color: "#61DAFB"
+    capabilities:
+      - react_native
+      - ios_development
+      - android_development
+      - mobile_ui
+    priority: normal
+    principles:
+      - defensive-programming
+      - error-handling-duality
+    tuple_binding:
+      slot: Strategy
+      effect: execute
+    model_preference: sonnet
+
+  # =============================================================================
+  # DATA/ML AGENTS
+  # =============================================================================
+
+  ml-developer:
+    file: data/ml/data-ml-model.md
+    type: developer
+    description: Specialized agent for machine learning model development and deployment
+    color: "#8B5CF6"
+    capabilities:
+      - model_development
+      - training_pipelines
+      - model_deployment
+      - feature_engineering
+    priority: normal
+    principles:
+      - progressive-evidence
+      - logging-discipline
+    tuple_binding:
+      slot: Strategy
+      effect: execute
+    model_preference: sonnet
+
+  # =============================================================================
+  # TESTING AGENTS
+  # =============================================================================
+
+  production-validator:
+    file: testing/production-validator.md
+    type: analyst
+    description: Production validation specialist ensuring applications are deployment-ready
+    color: "#EF4444"
+    capabilities:
+      - production_validation
+      - deployment_readiness
+      - smoke_testing
+    priority: high
+    principles:
+      - progressive-evidence
+      - cross-boundary-testing
+    tuple_binding:
+      slot: Check
+      effect: verify
+    model_preference: sonnet
+
+  tdd-london-swarm:
+    file: testing/tdd-london-swarm.md
+    type: coordinator
+    description: TDD London School specialist for mock-driven development
+    color: "#3B82F6"
+    capabilities:
+      - tdd_coordination
+      - mock_driven_development
+      - outside_in_testing
+    priority: normal
+    principles:
+      - testing-anti-patterns
+      - loud-mock-pattern
+    skills:
+      - testing-workflow
+    tuple_binding:
+      slot: Check
+      effect: verify
+    model_preference: sonnet
+
+  # =============================================================================
+  # TEMPLATES (Reusable agent patterns)
+  # =============================================================================
+
+  automation-smart-agent:
+    file: templates/automation-smart-agent.md
+    type: template
+    description: Template for intelligent agent coordination and dynamic spawning
+    color: "#6366F1"
+    capabilities:
+      - smart_routing
+      - dynamic_spawning
+    priority: low
+    tuple_binding:
+      slot: Strategy
+      effect: plan
+    model_preference: sonnet
+
+  implementer-sparc-coder:
+    file: templates/implementer-sparc-coder.md
+    type: template
+    description: Template for SPARC-methodology code transformation
+    color: "#10B981"
+    capabilities:
+      - code_transformation
+      - tdd_practices
+    priority: low
+    principles:
+      - defensive-programming
+    tuple_binding:
+      slot: Strategy
+      effect: execute
+    model_preference: sonnet
+
+  github-pr-manager:
+    file: templates/github-pr-manager.md
+    type: template
+    description: Template for GitHub PR management
+    color: "#4ECDC4"
+    capabilities:
+      - pr_management
+    priority: low
+    tuple_binding:
+      slot: Strategy
+      effect: execute
+    model_preference: sonnet
+
+  orchestrator-task:
+    file: templates/orchestrator-task.md
+    type: template
+    description: Template for central task coordination
+    color: "#8B5CF6"
+    capabilities:
+      - task_decomposition
+      - result_synthesis
+    priority: low
+    principles:
+      - thinking-tuple
+    tuple_binding:
+      slot: Strategy
+      effect: plan
+    model_preference: opus
+
+  memory-coordinator:
+    file: templates/memory-coordinator.md
+    type: template
+    description: Template for persistent memory management across sessions
+    color: "#06B6D4"
+    capabilities:
+      - memory_management
+      - cross_agent_sharing
+    priority: low
+    tuple_binding:
+      slot: Constraints
+      effect: expand
+    model_preference: sonnet
+
+  performance-analyzer:
+    file: templates/performance-analyzer.md
+    type: template
+    description: Template for performance bottleneck analysis
+    color: "#22C55E"
+    capabilities:
+      - bottleneck_analysis
+      - workflow_optimization
+    priority: low
+    principles:
+      - progressive-evidence
+    tuple_binding:
+      slot: Check
+      effect: verify
+    model_preference: haiku
+
+  sparc-coordinator:
+    file: templates/sparc-coordinator.md
+    type: template
+    description: Template for SPARC methodology orchestration
+    color: "#7C3AED"
+    capabilities:
+      - sparc_coordination
+      - phase_management
+    priority: low
+    principles:
+      - thinking-tuple
+    tuple_binding:
+      slot: Strategy
+      effect: plan
+    model_preference: opus
+
+  # =============================================================================
+  # CUSTOM AGENTS
+  # =============================================================================
+
+  test-long-runner:
+    file: custom/test-long-runner.md
+    type: executor
+    description: Test agent that can run for 30+ minutes on complex tasks
+    color: "#95A5A6"
+    capabilities:
+      - long_running_tasks
+      - complex_analysis
+    priority: low
+    principles:
+      - progressive-evidence
+    tuple_binding:
+      slot: Strategy
+      effect: execute
+    model_preference: sonnet
+
+# =============================================================================
+# METADATA
+# =============================================================================
+
+metadata:
+  total_agents: 32
+  categories:
+    core: 5
+    root: 4
+    sparc: 4
+    goal: 2
+    analysis: 1
+    development: 1
+    architecture: 1
+    documentation: 1
+    devops: 1
+    specialized: 1
+    data: 1
+    testing: 2
+    templates: 7
+    custom: 1
+  principle_coverage:
+    defensive-programming: 12
+    progressive-evidence: 10
+    thinking-tuple: 7
+    logging-discipline: 5
+    testing-anti-patterns: 4
+    universal-property-verification: 3
+    error-handling-duality: 3
+    semantic-inheritance: 2
+    unified-ontology: 2
+    dslp-framework: 2
+    execution-boundary: 2
+    commands-as-modes: 2
+    cross-boundary-testing: 2
+    loud-mock-pattern: 2
+    type-system-integration: 2
+    execution-modes: 1
+    cognitive-architecture: 1
+    feedback-loop-awareness: 1
+    configuration-variation: 1
+  tuple_slot_distribution:
+    Strategy: 18
+    Check: 8
+    Constraints: 4
+    Invariant: 4
+  model_distribution:
+    sonnet: 22
+    haiku: 5
+    opus: 7
