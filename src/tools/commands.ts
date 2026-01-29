@@ -1,34 +1,53 @@
 import * as path from "path";
 import { readFile, listFiles, fileExists } from "../utils/file-reader.js";
-import { resolveAssetPath, resolveAssetDir } from "../utils/file-reader.js";
 import { parseYamlFile } from "../utils/yaml-parser.js";
 
-export async function getCommand(projectDir: string, name: string) {
-  const filePath = await resolveAssetPath(projectDir, `commands/${name}.md`);
-  const content = await readFile(filePath);
+export async function getCommand(claudeDir: string, name: string) {
+  const commandPath = path.join(claudeDir, ".claude", "commands", `${name}.md`);
+
+  if (!(await fileExists(commandPath))) {
+    throw new Error(`Command '${name}' not found`);
+  }
+
+  const content = await readFile(commandPath);
+
   return {
-    content: [{ type: "text", text: content }],
+    content: [
+      {
+        type: "text",
+        text: content,
+      },
+    ],
   };
 }
 
-export async function listCommands(projectDir: string, category?: string) {
-  const commandsDir = await resolveAssetDir(projectDir, "commands");
+export async function listCommands(claudeDir: string, category?: string) {
+  const commandsDir = path.join(claudeDir, ".claude", "commands");
   const files = await listFiles(commandsDir, ".md");
 
   const commands = files
     .filter((file) => file !== "README.md")
     .map((file) => file.replace(".md", ""));
 
+  // If metadata.yaml exists, use it for categorization
   const metadataPath = path.join(commandsDir, "metadata.yaml");
   if (await fileExists(metadataPath)) {
     try {
       const metadata = await parseYamlFile(metadataPath);
+
       if (category && category !== "all") {
+        // Filter by category
         const filtered = Object.entries(metadata.commands || {})
           .filter(([_, cmd]: [string, any]) => cmd.type === category)
           .map(([name]) => name);
+
         return {
-          content: [{ type: "text", text: JSON.stringify(filtered, null, 2) }],
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(filtered, null, 2),
+            },
+          ],
         };
       }
     } catch (error) {
@@ -37,6 +56,11 @@ export async function listCommands(projectDir: string, category?: string) {
   }
 
   return {
-    content: [{ type: "text", text: JSON.stringify(commands, null, 2) }],
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(commands, null, 2),
+      },
+    ],
   };
 }

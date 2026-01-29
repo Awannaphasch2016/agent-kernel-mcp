@@ -25,21 +25,54 @@ import {
   formatPrompt,
 } from "./tools/orchestration.js";
 
+import { existsSync } from "fs";
+
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Project root resolution (in order of priority):
-// 1. AGENT_KERNEL_PROJECT_ROOT env var (explicit config)
-// 2. Current working directory (fresh project scenario - Claude Code sets cwd)
-// 3. Navigate up from build dir (legacy: embedded in .claude/integrations/)
-const CLAUDE_DIR = process.env.AGENT_KERNEL_PROJECT_ROOT
-  || process.cwd();
+// Package root (where resources/ is located)
+const PACKAGE_ROOT = path.resolve(__dirname, "..");
+
+// Bundled resources location (shipped with the package)
+const BUNDLED_RESOURCES = path.join(PACKAGE_ROOT, "resources");
+
+// Project-specific resources (optional override)
+const PROJECT_DIR = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+const PROJECT_RESOURCES = path.join(PROJECT_DIR, ".claude");
+
+/**
+ * Resource resolution with fallback:
+ * 1. Project-specific: CLAUDE_PROJECT_DIR/.claude/{resource}
+ * 2. Bundled: package/resources/{resource}
+ *
+ * This allows projects to override bundled resources while ensuring
+ * the MCP works out-of-box with bundled defaults.
+ */
+function resolveResourceDir(resourceType: string): string {
+  // Check project-specific first
+  const projectPath = path.join(PROJECT_RESOURCES, resourceType);
+  if (existsSync(projectPath)) {
+    return PROJECT_RESOURCES;  // Return .claude dir, not the resource subdir
+  }
+
+  // Fall back to bundled resources
+  if (existsSync(BUNDLED_RESOURCES)) {
+    return BUNDLED_RESOURCES;
+  }
+
+  // Legacy fallback: use project dir anyway (will fail gracefully)
+  return PROJECT_RESOURCES;
+}
+
+// For backward compatibility, CLAUDE_DIR is still used by tool functions
+// But now it resolves to bundled resources when project doesn't have them
+const CLAUDE_DIR = resolveResourceDir("principles");
 
 const server = new Server(
   {
     name: "agent-kernel-mcp",
-    version: "2.0.0",
+    version: "2.1.0",
   },
   {
     capabilities: {
@@ -461,8 +494,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Agent Kernel MCP server v2.0.0 running on stdio");
+
+  // Log startup info
+  const usingBundled = existsSync(BUNDLED_RESOURCES);
+  const hasProjectOverrides = existsSync(PROJECT_RESOURCES);
+
+  console.error("Agent Kernel MCP server v2.1.0 running on stdio");
   console.error("  Knowledge tools: 10 | Orchestration tools: 6 | Total: 16");
+  console.error(`  Resources: ${usingBundled ? "bundled" : "project"} (project overrides: ${hasProjectOverrides ? "yes" : "no"})`);
 }
 
 main().catch((error) => {

@@ -1,14 +1,21 @@
 {
-  "name": "agent-kernel-mcp",
-  "version": "2.0.0",
-  "description": "Agent Kernel MCP - Metacognitive protocol server for AI-assisted development",
+  "name": "@agent-kernel/mcp",
+  "version": "2.1.0",
+  "description": "MCP server for Agent Kernel metacognition - knowledge retrieval + protocol orchestration. Ships with bundled principles, skills, and commands.",
   "type": "module",
   "main": "build/index.js",
   "bin": {
-    "agent-kernel-mcp": "./build/index.js"
+    "agent-kernel-mcp": "./bin/cli.js"
   },
+  "files": [
+    "build",
+    "resources",
+    "bin"
+  ],
   "scripts": {
     "build": "tsc",
+    "bundle": "node scripts/bundle-resources.js",
+    "prepublish": "npm run build && npm run bundle",
     "start": "node build/index.js",
     "dev": "tsc && node build/index.js"
   },
@@ -20,6 +27,16 @@
     "@types/node": "^20.0.0",
     "typescript": "^5.0.0"
   },
-  "keywords": ["mcp", "agent-kernel", "metacognition", "thinking-tuple", "claude"],
+  "keywords": [
+    "mcp",
+    "claude",
+    "agent-kernel",
+    "metacognition",
+    "ai-agent"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anthropics/agent-kernel-mcp"
+  },
   "license": "MIT"
 }

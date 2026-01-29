@@ -1,18 +1,23 @@
 import * as path from "path";
-import { readFile, fileExists } from "../utils/file-reader.js";
-import { resolveAssetDir } from "../utils/file-reader.js";
+import { readFile, fileExists, listFiles } from "../utils/file-reader.js";
 
-export async function loadSkill(projectDir: string, skillName: string) {
-  const skillDir = await resolveAssetDir(projectDir, `skills/${skillName}`);
+export async function loadSkill(claudeDir: string, skillName: string) {
+  const skillDir = path.join(claudeDir, ".claude", "skills", skillName);
 
-  const possibleFiles = ["SKILL.md", "README.md", "checklist.md", `${skillName}.md`];
+  // Try to read the skill's main file or checklist
+  const possibleFiles = ["README.md", "checklist.md", `${skillName}.md`];
 
   for (const file of possibleFiles) {
     const filePath = path.join(skillDir, file);
     if (await fileExists(filePath)) {
       const content = await readFile(filePath);
       return {
-        content: [{ type: "text", text: content }],
+        content: [
+          {
+            type: "text",
+            text: content,
+          },
+        ],
       };
     }
   }

@@ -1,10 +1,21 @@
-import { readFile } from "../utils/file-reader.js";
-import { resolveAssetPath } from "../utils/file-reader.js";
+import * as path from "path";
+import { readFile, fileExists } from "../utils/file-reader.js";
 
-export async function getClaudeMd(projectDir: string) {
-  const filePath = await resolveAssetPath(projectDir, "CLAUDE.md");
-  const content = await readFile(filePath);
+export async function getClaudeMd(claudeDir: string) {
+  const claudeMdPath = path.join(claudeDir, ".claude", "CLAUDE.md");
+
+  if (!(await fileExists(claudeMdPath))) {
+    throw new Error("CLAUDE.md not found");
+  }
+
+  const content = await readFile(claudeMdPath);
+
   return {
-    content: [{ type: "text", text: content }],
+    content: [
+      {
+        type: "text",
+        text: content,
+      },
+    ],
   };
 }

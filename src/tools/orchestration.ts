@@ -9,7 +9,6 @@
 import * as path from "path";
 import * as fs from "fs/promises";
 import { readFile, fileExists, listFiles } from "../utils/file-reader.js";
-import { resolveAssetPath, resolveAssetDir } from "../utils/file-reader.js";
 import { parseYamlFile } from "../utils/yaml-parser.js";
 
 // =============================================================================
@@ -84,7 +83,7 @@ export async function tupleInit(
 
   tupleStore.set(id, tuple);
 
-  // Persist to disk (project-local)
+  // Persist to disk
   await saveTuple(claudeDir, tuple);
 
   return {
@@ -197,14 +196,13 @@ export async function tupleUpdate(
 
 export async function routeCommand(claudeDir: string, intent: string, tupleId?: string) {
   // Load command metadata (with embedded fallback for fresh projects)
-  let metadataPath: string;
+  const metadataPath = path.join(claudeDir, ".claude", "commands", "metadata.yaml");
   let primitives: Record<string, any> = {};
 
-  try {
-    metadataPath = await resolveAssetPath(claudeDir, "commands/metadata.yaml");
+  if (await fileExists(metadataPath)) {
     const metadata = await parseYamlFile(metadataPath);
     primitives = metadata.primitives || {};
-  } catch {
+  } else {
     // Embedded fallback primitive definitions for fresh projects (no .claude/ directory)
     primitives = {
       explore: { slot: "Constraints", mode: "divergent_exploration", description: "Systematically explore solution space", local_check: "New options or insights discovered", execution_hints: { parallelizable: true, max_agents: 5, model_preference: "haiku" } },
@@ -495,26 +493,25 @@ export async function formatPrompt(
   additionalPrinciples?: string[]
 ) {
   // Load agent profile from registry
-  let registryPath: string;
+  const registryPath = path.join(claudeDir, ".claude", "agents", "registry.yaml");
   let agentProfile: any = null;
 
-  try {
-    registryPath = await resolveAssetPath(claudeDir, "agents/registry.yaml");
+  if (await fileExists(registryPath)) {
     const registry = await parseYamlFile(registryPath);
     agentProfile = registry.agents?.[agentType];
-  } catch {}
+  }
 
   // Try loading agent definition file directly
   if (!agentProfile) {
-    try {
-      const agentPath = await resolveAssetPath(claudeDir, `agents/core/${agentType}.md`);
+    const agentPath = path.join(claudeDir, ".claude", "agents", `${agentType}.md`);
+    if (await fileExists(agentPath)) {
       const content = await readFile(agentPath);
       agentProfile = {
         description: content.split("\n").find((l: string) => l.startsWith("# "))?.replace("# ", "") || agentType,
         principles: [],
         skills: [],
       };
-    } catch {}
+    }
   }
 
   if (!agentProfile) {
@@ -567,8 +564,8 @@ export async function formatPrompt(
   ];
   let principlesContent = "";
   if (principleNames.length > 0) {
+    const principlesDir = path.join(claudeDir, ".claude", "principles");
     try {
-      const principlesDir = await resolveAssetDir(claudeDir, "principles");
       const files = await listFiles(principlesDir, ".md");
       for (const name of principleNames) {
         for (const file of files) {

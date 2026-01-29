@@ -1,17 +1,21 @@
-import { readFile } from "../utils/file-reader.js";
-import { resolveAssetPath } from "../utils/file-reader.js";
+import * as path from "path";
+import { readFile, fileExists } from "../utils/file-reader.js";
 
-export async function getAgent(projectDir: string, agentName: string) {
-  // Try core/ subdirectory first, then top-level agents/
-  let filePath: string;
-  try {
-    filePath = await resolveAssetPath(projectDir, `agents/core/${agentName}.md`);
-  } catch {
-    filePath = await resolveAssetPath(projectDir, `agents/${agentName}.md`);
+export async function getAgent(claudeDir: string, agentName: string) {
+  const agentPath = path.join(claudeDir, ".claude", "agents", `${agentName}.md`);
+
+  if (!(await fileExists(agentPath))) {
+    throw new Error(`Agent '${agentName}' not found`);
   }
 
-  const content = await readFile(filePath);
+  const content = await readFile(agentPath);
+
   return {
-    content: [{ type: "text", text: content }],
+    content: [
+      {
+        type: "text",
+        text: content,
+      },
+    ],
   };
 }
