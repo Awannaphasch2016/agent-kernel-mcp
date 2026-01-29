@@ -89,7 +89,7 @@
 
 ## Core Principles (Always Loaded)
 
-These are in CLAUDE.md and always apply:
+See [core-principles.md](core-principles.md) for the complete Tier-0 principles.
 
 | # | Principle | One-liner |
 |---|-----------|-----------|
@@ -97,16 +97,24 @@ These are in CLAUDE.md and always apply:
 | 2 | Progressive Evidence | Verify weak → strong evidence |
 | 18 | Logging Discipline | Log for narrative reconstruction |
 | 20 | Execution Boundary | Reading code ≠ verifying it works |
-| 23 | Configuration Variation | Choose config mechanism by what varies |
 | 25 | Universal Property Verification | Verify ALL units for universal claims (∀) |
 | 26 | Thinking Tuple Protocol | Universal reasoning kernel |
 | 27 | Commands as Strategy Modes | Commands are modes within Strategy |
+| 28 | DSLP Framework | Pattern-based reasoning |
+| 29 | Unified Ontological Framework | 11 metaphysical primitives |
+| 30 | Semantic Inheritance | Agent-native composability |
+| 31 | Execution Modes | Chat vs Agent Kernel |
+| 32 | Cognitive Architecture | Unified backend |
+| 33 | Consciousness Architecture | Four-layer cognitive model |
 
 ---
 
 ## Quick Reference
 
 ```bash
+# Core Agent Kernel principles (Tier-0)?
+Read: .claude/principles/core-principles.md
+
 # Setting up credentials?
 Read: .claude/principles/configuration-principles.md
 
